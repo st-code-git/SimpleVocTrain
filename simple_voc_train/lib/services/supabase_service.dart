@@ -58,4 +58,9 @@ class SupabaseService {
     
     return response.map<Vocabulary>((json) => Vocabulary.fromJson(json)).toList();;
   }
+
+  //Signout Methode
+  Future<void> signOut() async {
+    await Supabase.instance.client.auth.signOut();
+  }
 }

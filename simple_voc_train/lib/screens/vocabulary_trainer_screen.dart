@@ -28,9 +28,20 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Vokabeltrainer Master'),
-          // Der globale Sprachwähler (Dropdown) wurde entfernt, 
-          // da er für den "Anlegen"-Tab keinen Sinn mehr ergibt.
           
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout), // Das Icon (z.B. Logout Tür)
+              tooltip: 'Ausloggen', // Text beim Gedrückthalten
+              onPressed: () async {
+                // Aktion beim Klicken (z.B. Supabase Logout)
+                await _supabaseService.signOut();
+                // Hinweis: Dank AuthGate springt die App automatisch zum Login zurück
+              },
+            ),
+          // more buttons.....
+        ],
+
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Abfrage', icon: Icon(Icons.quiz)),
