@@ -14,13 +14,17 @@ const String supabaseAnonKey = '';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  try {
   // Lade die .env-Datei
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: "assets/env");
 
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+  } catch (e) {
+    print("Fehler beim Start: $e"); // Siehst du in der F12 Konsole
+  }
 
   runApp(const MyApp());
 }
