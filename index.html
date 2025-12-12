@@ -17,6 +17,18 @@
   <base href="/SimpleVocTrain/">
 
   <script>
+    // Zeige sofort beim Start die URL an. Das stoppt alles andere.
+    alert("URL beim Start:\n" + window.location.href);
+
+    // Der Rettungs-Versuch (wie vorher)
+    if (window.location.search.includes('code=')) {
+      var newUrl = window.location.origin + window.location.pathname + '#/' + window.location.search;
+      console.log("🚑 Rettungs-Script aktiv! Neue URL: " + newUrl);
+      window.history.replaceState(null, '', newUrl);
+    }
+  </script>
+  
+  <!-- <script>
     // Wir schauen, ob die URL so aussieht: .../SimpleVocTrain/?code=xyz
     if (window.location.search.includes('code=')) {
       console.log("🚑 Rettungs-Script: Code gefunden! Verschiebe ihn...");
@@ -31,7 +43,7 @@
       // Browser URL ändern ohne Reload
       window.history.replaceState(null, '', newUrl);
     }
-  </script>
+  </script>  -->
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
