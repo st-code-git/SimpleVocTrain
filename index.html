@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
+
+  <script>
+  // 1. Prüfen: Ist ein Code in der URL?
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+
+  if (code) {
+    console.log("📦 Code gefunden! Lege ihn in den LocalStorage...");
+    
+    // 2. Wir speichern ihn sicher ab ("in den Briefkasten werfen")
+    window.localStorage.setItem('supabase_auth_code', code);
+
+    // 3. URL aufräumen (Code entfernen, damit es sauber aussieht)
+    const newUrl = window.location.origin + window.location.pathname + '#/';
+    window.history.replaceState(null, '', newUrl);
+  }
+</script>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
