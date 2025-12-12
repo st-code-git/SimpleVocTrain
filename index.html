@@ -16,6 +16,23 @@
   -->
   <base href="/SimpleVocTrain/">
 
+  <script>
+    // Wir schauen, ob die URL so aussieht: .../SimpleVocTrain/?code=xyz
+    if (window.location.search.includes('code=')) {
+      console.log("🚑 Rettungs-Script: Code gefunden! Verschiebe ihn...");
+      
+      // Wir bauen die URL um zu: .../SimpleVocTrain/#/?code=xyz
+      // Damit bleibt der Code erhalten und Flutter kann ihn lesen.
+      var newUrl = window.location.origin + 
+                   window.location.pathname + 
+                   '#/' + 
+                   window.location.search; // Der Teil mit ?code=...
+      
+      // Browser URL ändern ohne Reload
+      window.history.replaceState(null, '', newUrl);
+    }
+  </script>
+
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
