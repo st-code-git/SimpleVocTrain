@@ -13,6 +13,8 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+
+ 
   // Die signIn Methode, die du brauchst!
   Future<void> _signIn() async {
     try {
@@ -20,15 +22,45 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // HINWEIS: Wir müssen hier NICHTS navigieren!
-      // Sobald signIn erfolgreich ist, merkt das AuthGate in main.dart das
-      // und wechselt automatisch zur HomePage.
+      if (!mounted) return;
+
+    // ERFOLG: Weiterleiten zur Hauptseite und Login vergessen
+      Navigator.of(context).pushReplacementNamed('/home');
+      
     } on AuthException catch (e) {
       // Fehler anzeigen (z.B. falsches Passwort)
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unbekannter Fehler')));
     }
+  }
+
+  Future<void> _updatePassword() async {
+  try {
+    // Das aktualisiert den aktuell eingeloggten User (der durch den Invite Link drin ist)
+    await Supabase.instance.client.auth.updateUser(
+      UserAttributes(
+        password: _passwordController.text,
+      ),
+    );
+    // Erfolg: Weiterleiten zum Dashboard oder Success-Message
+    print("Passwort erfolgreich gesetzt!");
+  } catch (e) {
+    print("Fehler: $e");
+  }
+}
+
+@override
+  void initState() {
+    super.initState();
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      
+      if (event == AuthChangeEvent.passwordRecovery) {
+        // WICHTIG: Hierhin navigieren, wenn der User per Link kommt!
+        Navigator.of(context).pushNamed('/update-password-page'); 
+      }
+    });
   }
 
   @override

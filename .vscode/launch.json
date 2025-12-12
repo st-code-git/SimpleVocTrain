@@ -1,0 +1,37 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "simple_voc_train",
+            "cwd": "simple_voc_train",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "simple_voc_train (profile mode)",
+            "cwd": "simple_voc_train",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "simple_voc_train (release mode)",
+            "cwd": "simple_voc_train",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "simple_voc_train (Flutter Chrome)",
+            "program": "lib/main.dart",
+            "cwd": "simple_voc_train",
+            "deviceId": "chrome",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "--web-port",
+                "3000"
+            ]
+        }
+    ]
+}
