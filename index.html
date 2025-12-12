@@ -50,6 +50,12 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <!--<script src="flutter_bootstrap.js" async></script> -->
+  <script>
+    var scriptTag = document.createElement('script');
+    scriptTag.src = 'main.dart.js';
+    scriptTag.type = 'application/javascript';
+    document.body.append(scriptTag);
+  </script>
 </body>
 </html>
