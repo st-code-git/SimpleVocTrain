@@ -47,10 +47,22 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 32.0),
+              child: Center(
+                child: Text(
+                  'This is simple voc - easy vocabulary learning',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(labelText: 'Email'),
@@ -64,6 +76,18 @@ class _LoginPageState extends State<LoginPage> {
             ElevatedButton(
               onPressed: _signIn,
               child: const Text('Einloggen'),
+            ),
+             Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 40.0, 16.0, 12.0),
+              child: Text(
+                'Diese Website wird ausschließlich privat und nicht geschäftsmäßig betrieben.\n'
+                'Es findet keine kommerzielle Nutzung oder Datenverarbeitung zu Werbezwecken statt.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey,
+                ),
+              ),
             ),
           ],
         ),
