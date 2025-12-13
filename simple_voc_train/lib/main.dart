@@ -6,9 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/vocabulary_trainer_screen.dart';
 import 'screens/login_page.dart';
 import 'screens/password_reset_screen.dart';
+import 'screens/settings_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-// Ersetzen Sie DIESE PLATZHALTER durch Ihre echten Supabase-Werte
 const String supabaseUrl = '';
 const String supabaseAnonKey = '';
 final supabase = Supabase.instance.client;
@@ -17,7 +17,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-  // Lade die .env-Datei
   await dotenv.load(fileName: "assets/env");
 
   await Supabase.initialize(
@@ -29,7 +28,7 @@ Future<void> main() async {
     ),
   );
   } catch (e) {
-    print("Fehler beim Start: $e"); // Siehst du in der F12 Konsole
+    print("Fehler beim Start: $e"); 
   }
 
   runApp(const MyApp());
@@ -52,10 +51,23 @@ class _MyAppState extends State<MyApp> {
     // 2. Der Listener für den Invite-Link
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final AuthChangeEvent event = data.event;
-      
+
+      print("Auth State changed: $event");
+
       if (event == AuthChangeEvent.passwordRecovery) {
         // Schiebt die Passwort-Seite über alles andere drüber
         navigatorKey.currentState?.pushNamed('/update-password-page');
+      }
+
+      if(event == AuthChangeEvent.signedIn) {
+
+        final fullUrl = Uri.base.toString();
+
+        if(fullUrl.contains('type=invite')) {
+
+          print("Invite Link erkannt");
+          navigatorKey.currentState?.pushNamed('/update-password-page');
+        }
       }
     });
   }
@@ -72,6 +84,7 @@ class _MyAppState extends State<MyApp> {
         '/home': (context) => const VocabularyTrainerScreen(),
         '/login': (context) => const LoginPage(),
         '/update-password-page': (context) => const PasswordResetScreen(),
+        '/settings-page': (context) => SettingsPage(),
       },
     );
   }

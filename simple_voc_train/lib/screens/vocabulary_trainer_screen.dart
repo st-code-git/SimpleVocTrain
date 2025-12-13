@@ -34,12 +34,18 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
               icon: const Icon(Icons.logout), // Das Icon (z.B. Logout Tür)
               tooltip: 'Ausloggen', // Text beim Gedrückthalten
               onPressed: () async {
-                // Aktion beim Klicken (z.B. Supabase Logout)
                 await _supabaseService.signOut();
-                // Hinweis: Dank AuthGate springt die App automatisch zum Login zurück
               },
             ),
-          // more buttons.....
+            IconButton(
+              icon: const Icon(Icons.menu), // Das Icon (z.B. Refresh)
+              tooltip: 'Konfiguration', // Text beim Gedrückthalten
+              onPressed: () {
+                setState(() {
+                  navigatorKey.currentState?.pushNamed('/settings-page');
+                });
+              },
+            ),
         ],
 
           bottom: const TabBar(
