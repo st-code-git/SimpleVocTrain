@@ -51,7 +51,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
       setState(() {
         _availableSets = sets;
         // Prüfen, ob die gewählte ID noch existiert
-        if (!_availableSets.any((s) => s.id == _selectedId)) {
+        if (!_availableSets.any((s) => s.id == _selectedId) || _availableSets.isEmpty) {
           _selectedId = null;
         }
       });
@@ -169,31 +169,39 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                         
                         // Dropdown for existing sets
                         if (_mode == CreationMode.extendExisting)
-                          Align(
-                          alignment: Alignment.topRight, // Erzwingt die Ausrichtung der Column nach links
-                          child: Column(
-                          //mainAxisSize: MainAxisSize.min,
-                          //crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              DropdownButton<int>(
-                                hint: const Text('Wort zum bearbeiten wählen'),
-                                value: _selectedId,
-                                items: _availableSets
-                                    .map((set) => DropdownMenuItem(
-                                          value: set.id,
-                                          child: Text(set.wordsDe.first),
-                                        ))
-                                    .toList(),
-                                onChanged: (id) {
-                                  if (id != null) {
-                                    setState(() => _selectedId = id);
-                                    _loadExistingSet(id);
-                                  }
-                                },
+                            Align(
+                              alignment: Alignment.topRight,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _availableSets.isNotEmpty
+                              ? DropdownButton<int>(
+                                  hint: const Text('Wort zum bearbeiten wählen'),
+                                  value: _availableSets.any((set) => set.id == _selectedId)
+                                      ? _selectedId
+                                      : null, // ← Nur gültige Werte setzen
+                                  items: _availableSets
+                                      .map((set) => DropdownMenuItem(
+                                            value: set.id,
+                                            child: Text(set.wordsDe.first),
+                                          ))
+                                      .toList(),
+                                  onChanged: (id) {
+                                    if (id != null) {
+                                      setState(() => _selectedId = id);
+                                      _loadExistingSet(id);
+                                    }
+                                  },
+                                )
+                                  : const Text(
+                                  'Keine Worte vorhanden',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                                ],
                               ),
-                              const SizedBox(height: 16),
-                            ],
-                          )),
+                            ),
+
                         
                         // Input fields
                         ...AppLanguage2.values.map((lang) {

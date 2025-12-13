@@ -62,19 +62,27 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
       // Sichere Methode: Erst IDs laden, dann eine wählen
       final allIds = await widget.supabaseService.fetchAllIds();
       
-      if (allIds.isEmpty) {
+      if (allIds.isEmpty || allIds.length == 1) {
         setState(() => _message = 'Keine Vokabeln in Vocabulary_Master gefunden.');
         return;
       }
 
+      
       final randomId = allIds[Random().nextInt(allIds.length)];
-      final vocab = await widget.supabaseService.fetchVocabularyById(randomId);
+      Vocabulary vocab = await widget.supabaseService.fetchVocabularyById(randomId);
+
+      while(vocab.getWordsFor(_quizLanguage!).isEmpty) 
+      {
+        final randomId = allIds[Random().nextInt(allIds.length)];
+        vocab = await widget.supabaseService.fetchVocabularyById(randomId);
+      }
 
       // Prüfen, ob das Quellwort in der gewählten Sprache überhaupt existiert
       if (vocab.getWordsFor(_quizLanguage!).isEmpty) {
-         setState(() => _message = 'ID $randomId geladen, aber kein Wort in ${_quizLanguage!.displayName} vorhanden. Versuchen Sie es erneut.');
-         return;
+          setState(() => _message = 'ID $randomId geladen, aber kein Wort in ${_quizLanguage!.displayName} vorhanden. Versuchen Sie es erneut.');
+          return;
       }
+
 
       setState(() {
         _currentVocabulary = vocab;
@@ -151,10 +159,15 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
                  groupValue: _requiredAnswers, onChanged: (v) => setState(() => _requiredAnswers = v!))),
             ],
           ),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _startQuiz,
-            child: const Text('Zufällige Vokabel abfragen'),
+          const Divider(height: 30, thickness: 0, color: Colors.transparent,),
+          FractionallySizedBox(
+                widthFactor: 0.25, // Button nimmt 60% der Bildschirmbreite ein
+                child: ElevatedButton(
+                onPressed: _isLoading ? null : _startQuiz,
+                child: const Text('Zufällige Vokabel abfragen'),
+            ),
           ),
+          const Divider(height: 30, color: Colors.transparent,),
           const Divider(height: 30),
 
           // Abfrage UI

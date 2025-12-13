@@ -27,23 +27,23 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Vokabeltrainer Master'),
+          title: const Text('easyvoc - einfach Vokabeln lernen'),
           
-          actions: [
+          actions: [         
             IconButton(
-              icon: const Icon(Icons.logout), // Das Icon (z.B. Logout Tür)
-              tooltip: 'Ausloggen', // Text beim Gedrückthalten
-              onPressed: () async {
-                await _supabaseService.signOut();
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.menu), // Das Icon (z.B. Refresh)
-              tooltip: 'Konfiguration', // Text beim Gedrückthalten
+              icon: const Icon(Icons.menu), 
+              tooltip: 'Konfiguration', 
               onPressed: () {
                 setState(() {
                   navigatorKey.currentState?.pushNamed('/settings-page');
                 });
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Ausloggen',
+              onPressed: () async {
+                await _supabaseService.signOut();
               },
             ),
         ],
@@ -65,7 +65,6 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
             ),
             
             // Tab 2: Anlegen / Bearbeiten
-            // HIER WAR DER FEHLER: Wir übergeben keine 'currentLanguage' mehr!
             TrainerCreateTab(
               supabaseService: _supabaseService,
             ),
