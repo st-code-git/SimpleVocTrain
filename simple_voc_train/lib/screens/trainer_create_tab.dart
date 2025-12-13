@@ -133,7 +133,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
             setState(() => _isLoading = false);
           }
         }
-      
+        
         @override
         Widget build(BuildContext context) {
           return Scaffold(
@@ -166,44 +166,70 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Dropdown for existing sets
-                        if (_mode == CreationMode.extendExisting)
-                            Align(
-                              alignment: Alignment.topRight,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _availableSets.isNotEmpty
-                              ? DropdownButton<int>(
-                                  hint: const Text('Wort zum bearbeiten wählen'),
-                                  value: _availableSets.any((set) => set.id == _selectedId)
-                                      ? _selectedId
-                                      : null, // ← Nur gültige Werte setzen
-                                  items: _availableSets
-                                      .map((set) => DropdownMenuItem(
-                                            value: set.id,
-                                            child: Text(set.wordsDe.first),
-                                          ))
-                                      .toList(),
-                                  onChanged: (id) {
-                                    if (id != null) {
-                                      setState(() => _selectedId = id);
-                                      _loadExistingSet(id);
-                                    }
-                                  },
-                                )
-                                  : const Text(
-                                  'Keine Worte vorhanden',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                                ],
-                              ),
-                            ),
 
+      
+    // Dropdown for existing sets
+                          if (_mode == CreationMode.extendExisting )
+                              Builder(
+                                builder: (context) {
+                                  // Prüft, ob überhaupt Sets existieren, die angezeigt werden können.
+                                  // Wir filtern hier bereits alle Sets heraus, die keine deutschen Worte haben.
+                                  final validSets = _availableSets.where((set) => set.wordsDe.isNotEmpty).toList();
+
+                                  if (validSets.isEmpty)
+                                  {
+                                    return Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: const Text(
+                                          'Keine Worte vorhanden',
+                                          style: TextStyle(color: Colors.grey, fontSize: 24,)
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  else
+                                  {
+                                    return Align(
+                                      alignment: Alignment.topRight,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          DropdownButton<int>(
+                                            hint: const Text('Wort zum bearbeiten wählen'),
+                                            // Stellt sicher, dass die ID noch in der Liste der validen Sets existiert
+                                            value: validSets.any((set) => set.id == _selectedId)
+                                                ? _selectedId
+                                                : null,
+                                            items: validSets // <-- Wir verwenden jetzt die gefilterte Liste
+                                                .map((set) => DropdownMenuItem(
+                                                      value: set.id,
+                                                      // Sicherer Zugriff, da wir Set.wordsDe.isNotEmpty geprüft haben
+                                                      child: Text(set.wordsDe.first),
+                                                    ))
+                                                .toList(),
+                                            onChanged: (id) {
+                                              if (id != null) {
+                                                setState(() => _selectedId = id);
+                                                _loadExistingSet(id);
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                                
                         
-                        // Input fields
+                        // Bedingte Anzeige der Eingabefelder (Input fields)
+                        // Sie werden angezeigt, wenn:
+                        // 1. Wir im Modus 'Neues Set' sind.
+                        // 2. Wir im Modus 'Erweitern' sind UND bereits ein Set ausgewählt (_selectedId != null) wurde.
+                        if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
                         ...AppLanguage2.values.map((lang) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,17 +240,25 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                                   .entries
                                   .map((e) => TextField(
                                         controller: e.value
-                                      //  decoration: InputDecoration(labelText: '${lang.label} ${e.key + 1}'),
+                                        //  decoration: InputDecoration(labelText: '${lang.label} ${e.key + 1}'),
                                       ))
                                   .toList(),
                               const SizedBox(height: 16),
                             ],
                           );
                         }).toList(),
-                        
-                        // Save button
+
+                        // Bedingte Anzeige des Speicher-Buttons (Save button)
+                        if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
                         ElevatedButton(onPressed: _save, child: const Text('Speichern')),
-                        
+                                              
+                        // Message
+                        if (_message != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(_message!, style: const TextStyle(color: Colors.red)),
+                        ),
+                                              
                         // Message
                         if (_message != null)
                           Padding(
