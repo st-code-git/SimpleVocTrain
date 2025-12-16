@@ -1,4 +1,7 @@
-import '../services/supabase_service.dart'; // Import für AppLanguage
+import '../models/app_language.dart';
+import '../services/language_service.dart';
+
+// Import für AppLanguage
 
 class Vocabulary {
   final int id;
@@ -39,11 +42,15 @@ class Vocabulary {
   }
 
   // Gibt die Wörter für eine bestimmte Sprache zurück
-  List<String> getWordsFor(AppLanguage1 lang) {
-    switch (lang) {
-      case AppLanguage1.german: return wordsDe;
-      case AppLanguage1.english: return wordsEn;
-      case AppLanguage1.spanish: return wordsEs;
+  List<String> getWordsFor(AppLanguage lang, LanguageService service) {
+    if (lang == service.lang1) {
+      return wordsDe; // oder wie deine Liste für Slot 1 heißt
+    } else if (lang == service.lang2) {
+      return wordsEn; // für Slot 2
+    } else if (lang == service.lang3) {
+      return wordsEs; // für Slot 3
+    } else {
+      return [];
     }
   }
 }

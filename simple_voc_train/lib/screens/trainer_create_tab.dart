@@ -1,6 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/supabase_service.dart';
+import '../services/language_service.dart'; 
 import '../models/vocabulary.dart';
+import '../models/app_language.dart';
 import 'package:postgrest/postgrest.dart';
 
 enum CreationMode { createNew, extendExisting }
@@ -17,27 +22,46 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
   CreationMode _mode = CreationMode.createNew;
   
   // Map von Sprache -> Liste von 5 Controllern
-  final Map<AppLanguage2, List<TextEditingController>> _controllers = {};
+  final Map<AppLanguage, List<TextEditingController>> _controllers = {};
   
-  // ÄNDERUNG 1: Statt nur IDs speichern wir die ganzen Objekte für das Dropdown
+  //Statt nur IDs speichern wir die ganzen Objekte für das Dropdown
   List<Vocabulary> _availableSets = [];
   int? _selectedId;
   
   String? _message;
   bool _isLoading = false;
 
+  bool _isInit = true; // Hilfsvariable, damit wir Controller nicht doppelt erstellen
+
   @override
-  void initState() {
-    super.initState();
-    for (var lang in AppLanguage2.values) {
-      _controllers[lang] = List.generate(5, (_) => TextEditingController());
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // 1. WICHTIG: .watch() statt .read()
+    // Das sorgt dafür, dass diese Methode erneut ausgeführt wird, sobald
+    // der Service fertig geladen hat (notifyListeners ruft).
+    final languageService = context.watch<LanguageService>();
+
+    // 2. Controller IMMER prüfen (nicht nur bei _isInit)
+    // Wenn neue Sprachen dazukommen (weil DB fertig geladen), erstellen wir sie hier nach.
+    for (var lang in languageService.all) {
+      if (!_controllers.containsKey(lang)) {
+         _controllers[lang] = List.generate(5, (_) => TextEditingController());
+      }
     }
-    _loadIds();
+
+    // 3. Nur Logik, die wirklich nur EINMAL passieren darf (wie DB Calls), in _isInit lassen
+    if (_isInit) {
+      _loadIds(); 
+      _isInit = false; 
+    }
   }
   
   @override
   void dispose() {
-    _controllers.values.forEach((l) => l.forEach((c) => c.dispose()));
+    for (var l in _controllers.values) {
+      l.forEach((c) => c.dispose());
+    }
     super.dispose();
   }
 
@@ -61,22 +85,22 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     }
   }
 
-  Future<void> _loadExistingSet(int id) async {
+  Future<void> _loadExistingSet(int id, LanguageService service) async {
     setState(() => _isLoading = true);
     _clearFields();
     try {
       final vocab = await widget.supabaseService.fetchVocabularyById(id);
       
       // Felder befüllen
-      void fill(AppLanguage2 lang, List<String> words) {
+      void fill(AppLanguage lang, List<String> words) {
         for (int i = 0; i < words.length && i < 5; i++) {
           _controllers[lang]![i].text = words[i];
         }
       }
-      fill(AppLanguage2.german, vocab.wordsDe);
-      fill(AppLanguage2.english, vocab.wordsEn);
-      fill(AppLanguage2.spanish, vocab.wordsEs);
-      
+      fill(service.lang1, vocab.wordsDe);
+      fill(service.lang2, vocab.wordsEn);
+      fill(service.lang3, vocab.wordsEs);
+
       setState(() => _message = 'Daten für ID $id geladen.');
     } catch (e) {
       setState(() => _message = 'Fehler: $e');
@@ -86,17 +110,19 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
   }
 
   void _clearFields() {
-    _controllers.values.forEach((l) => l.forEach((c) => c.clear()));
+    for (var l in _controllers.values) {
+      l.forEach((c) => c.clear());
+    }
   }
 
-  Future<void> _save() async {
+  Future<void> _save(LanguageService service) async {
     setState(() { _isLoading = true; _message = null; });
 
     // 1. Großes Datenobjekt bauen
     final Map<String, dynamic> data = {};
 
     // Helper: Liest Controller aus und schreibt in die korrekten Spaltennamen
-    void collect(AppLanguage2 lang, String prefix, [String suffix = '']) {
+    void collect(AppLanguage lang, String prefix, [String suffix = '']) {
       final list = _controllers[lang]!;
       for (int i = 0; i < 5; i++) {
         final text = list[i].text.trim();
@@ -107,9 +133,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     }
 
     // Mapping anwenden
-    collect(AppLanguage2.german, 'word', "ger");          // Wort1...
-    collect(AppLanguage2.english, 'word', 'en');   // word_1_en...
-    collect(AppLanguage2.spanish, 'word', 'es');   // word_1_es...
+    collect(service.lang1, 'word', "ger");          // Wort1...
+    collect(service.lang2, 'word', 'en');   // word_1_en...
+    collect(service.lang3 , 'word', 'es');   // word_1_es...
 
     try {
       if (_mode == CreationMode.createNew) {
@@ -135,150 +161,157 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
         }
         
         @override
-        Widget build(BuildContext context) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Trainer erstellen')),
-            body: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        // Mode selection
-                        Row(
-                          children: [
-                            Expanded(
-                              child: RadioListTile<CreationMode>(
-                                title: const Text('Neues Set'),
-                                value: CreationMode.createNew,
-                                groupValue: _mode,
-                                onChanged: (value) => setState(() => _mode = value!),
-                              ),
-                            ),
-                            Expanded(
-                              child: RadioListTile<CreationMode>(
-                                title: const Text('Erweitern'),
-                                value: CreationMode.extendExisting,
-                                groupValue: _mode,
-                                onChanged: (value) => setState(() => _mode = value!),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
+Widget build(BuildContext context) {
+  // 1. Service beobachten (watch), damit UI bei Änderungen neu baut
+  final languageService = context.watch<LanguageService>();
 
-      
-    // Dropdown for existing sets
-                          if (_mode == CreationMode.extendExisting )
-                              Builder(
-                                builder: (context) {
-                                  // Prüft, ob überhaupt Sets existieren, die angezeigt werden können.
-                                  // Wir filtern hier bereits alle Sets heraus, die keine deutschen Worte haben.
-                                  final validSets = _availableSets.where((set) => set.wordsDe.isNotEmpty).toList();
+  // Prüfen, ob lokal oder im Service geladen wird
+  final currentlyLoading = _isLoading || languageService.isLoading;
 
-                                  if (validSets.isEmpty)
-                                  {
-                                    return Align(
-                                      alignment: Alignment.topCenter,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
-                                        child: const Text(
-                                          'Keine Worte vorhanden',
-                                          style: TextStyle(color: Colors.grey, fontSize: 24,)
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  else
-                                  {
-                                    return Align(
-                                      alignment: Alignment.topRight,
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          DropdownButton<int>(
-                                            hint: const Text('Wort zum bearbeiten wählen'),
-                                            // Stellt sicher, dass die ID noch in der Liste der validen Sets existiert
-                                            value: validSets.any((set) => set.id == _selectedId)
-                                                ? _selectedId
-                                                : null,
-                                            items: validSets // <-- Wir verwenden jetzt die gefilterte Liste
-                                                .map((set) => DropdownMenuItem(
-                                                      value: set.id,
-                                                      // Sicherer Zugriff, da wir Set.wordsDe.isNotEmpty geprüft haben
-                                                      child: Text(set.wordsDe.first),
-                                                    ))
-                                                .toList(),
-                                            onChanged: (id) {
-                                              if (id != null) {
-                                                setState(() => _selectedId = id);
-                                                _loadExistingSet(id);
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    );
+  return Scaffold(
+    appBar: AppBar(title: const Text('Trainer erstellen')),
+    body: currentlyLoading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // --- Mode selection (Radio Buttons) ---
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<CreationMode>(
+                        title: const Text('Neues Set'),
+                        value: CreationMode.createNew,
+                        groupValue: _mode,
+                        onChanged: (value) => setState(() => _mode = value!),
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<CreationMode>(
+                        title: const Text('Erweitern'),
+                        value: CreationMode.extendExisting,
+                        groupValue: _mode,
+                        onChanged: (value) => setState(() => _mode = value!),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // --- Dropdown for existing sets ---
+                if (_mode == CreationMode.extendExisting)
+                  Builder(
+                    builder: (context) {
+                      // WICHTIG: Wir holen uns die "Hauptsprache" (Sprache 1) aus dem Service
+                      final mainLang = languageService.lang1;
+
+                      // Wir filtern Sets, die in der Hauptsprache keine Worte haben.
+                      // Dazu nutzen wir die Methode getWordsFor, die wir vorhin besprochen haben.
+                      final validSets = _availableSets.where((set) {
+                        return set.getWordsFor(mainLang, languageService).isNotEmpty;
+                      }).toList();
+
+                      if (validSets.isEmpty) {
+                        return const Align(
+                          alignment: Alignment.topCenter,
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              'Keine Worte in Hauptsprache vorhanden',
+                              style: TextStyle(color: Colors.grey, fontSize: 18),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return Align(
+                          alignment: Alignment.topRight,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              DropdownButton<int>(
+                                hint: const Text('Wort zum Bearbeiten wählen'),
+                                // Prüft, ob die gewählte ID noch valide ist
+                                value: validSets.any((set) => set.id == _selectedId)
+                                    ? _selectedId
+                                    : null,
+                                items: validSets.map((set) {
+                                  // Zeige das erste Wort der Hauptsprache an
+                                  final firstWord = set.getWordsFor(mainLang, languageService).first;
+                                  
+                                  return DropdownMenuItem(
+                                    value: set.id,
+                                    child: Text(firstWord),
+                                  );
+                                }).toList(),
+                                onChanged: (id) {
+                                  if (id != null) {
+                                    setState(() => _selectedId = id);
+                                    // Service mitgeben!
+                                    _loadExistingSet(id, languageService); 
                                   }
                                 },
                               ),
-                                
-                        
-                        // Bedingte Anzeige der Eingabefelder (Input fields)
-                        // Sie werden angezeigt, wenn:
-                        // 1. Wir im Modus 'Neues Set' sind.
-                        // 2. Wir im Modus 'Erweitern' sind UND bereits ein Set ausgewählt (_selectedId != null) wurde.
-                        if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
-                        ...AppLanguage2.values.map((lang) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(lang.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              ..._controllers[lang]!
-                                  .asMap()
-                                  .entries
-                                  .map((e) => TextField(
-                                        controller: e.value
-                                        //  decoration: InputDecoration(labelText: '${lang.label} ${e.key + 1}'),
-                                      ))
-                                  .toList(),
-                              const SizedBox(height: 16),
                             ],
-                          );
-                        }).toList(),
-
-                        // Bedingte Anzeige des Speicher-Buttons (Save button)
-                        if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
-                        ElevatedButton(onPressed: _save, child: const Text('Speichern')),
-                                              
-                        // Message
-                        if (_message != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: Text(_message!, style: const TextStyle(color: Colors.red)),
-                        ),
-                                              
-                        // Message
-                        if (_message != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Text(_message!, style: const TextStyle(color: Colors.red)),
                           ),
-                      ],
-                    ),
+                        );
+                      }
+                    },
                   ),
-          );
-        }
+
+                // --- Eingabefelder (Input fields) ---
+                if (_mode == CreationMode.createNew ||
+                    (_mode == CreationMode.extendExisting && _selectedId != null))
+                  // Wir iterieren über ALLE Sprachen aus dem Service
+                  ...languageService.all.map((lang) {
+                    // Sicherheitscheck, falls Controller für diese Sprache fehlen
+                    final controllersForLang = _controllers[lang];
+                    if (controllersForLang == null) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(lang.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        // Generiere Textfelder für die Controller dieser Sprache
+                        ...controllersForLang
+                            .asMap()
+                            .entries
+                            .map((e) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: TextField(
+                                    controller: e.value,
+                                    // decoration: InputDecoration(
+                                    //   hintText: '${lang.label} Wort ${e.key + 1}',
+                                    //   isDense: true,
+                                    // ),
+                                  ),
+                                )),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }),
+
+                // --- Speicher Button ---
+                if (_mode == CreationMode.createNew ||
+                    (_mode == CreationMode.extendExisting && _selectedId != null))
+                  ElevatedButton(
+                    // Closure verwenden: () => ...
+                    onPressed: () => _save(languageService), 
+                    child: const Text('Speichern'),
+                  ),
+
+                // --- Fehlermeldung ---
+                if (_message != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Text(_message!, style: const TextStyle(color: Colors.red)),
+                  ),
+              ],
+            ),
+          ),
+  );
+}
       }
 
-      enum AppLanguage2 {
-        german('Deutsch', 'de'),
-        english('English', 'en'),
-        spanish('Español', 'es');
-      
-        final String label;
-        final String code;
-        const AppLanguage2(this.label, this.code);
-      }
       

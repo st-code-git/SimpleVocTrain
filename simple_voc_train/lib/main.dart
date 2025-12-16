@@ -1,37 +1,34 @@
 // lib/main.dart
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/vocabulary_trainer_screen.dart';
 import 'screens/login_page.dart';
 import 'screens/password_reset_screen.dart';
 import 'screens/settings_page.dart';
+import 'services/supabase_service.dart';
+import 'services/language_service.dart';
+import 'package:provider/provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-const String supabaseUrl = '';
-const String supabaseAnonKey = '';
-final supabase = Supabase.instance.client;
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  try {
-  await dotenv.load(fileName: "assets/env");
-
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-
-    authOptions: const FlutterAuthClientOptions(
-    authFlowType: AuthFlowType.implicit,
+  await SupabaseService.instance.init(); // Initialisierung
+  runApp(
+    // 2. Provider Setup um die App wickeln
+    MultiProvider(
+      providers: [
+        // Hier wird der Service erstellt UND sofort die Lade-Methode gestartet
+        ChangeNotifierProvider(
+          create: (_) => LanguageService()..loadLanguages(), 
+        ),
+      ],
+      child: const MyApp(),
     ),
   );
-  } catch (e) {
-    print("Fehler beim Start: $e"); 
-  }
-
-  runApp(const MyApp());
 }
 
 
@@ -84,7 +81,7 @@ class _MyAppState extends State<MyApp> {
         '/home': (context) => const VocabularyTrainerScreen(),
         '/login': (context) => const LoginPage(),
         '/update-password-page': (context) => const PasswordResetScreen(),
-        '/settings-page': (context) => SettingsPage(),
+        '/settings-page': (context) => const SettingsPage(),
       },
     );
   }
