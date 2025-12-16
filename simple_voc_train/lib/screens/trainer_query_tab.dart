@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../models/vocabulary.dart';
+import '../models/app_language.dart';
 import '../services/supabase_service.dart';
+import '../services/language_service.dart';
+import 'package:provider/provider.dart';
 import '../screens/settings_page.dart';
 
 enum RequiredAnswers { all, one }
@@ -35,7 +38,8 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
   void initState() {
     super.initState();
     _quizLanguage = widget.currentLanguage; // Standard setzen
-    for (var lang in AppLanguages.all) {
+     final languageService = context.read<LanguageService>();
+    for (var lang in languageService.all) {
       _answerControllers[lang] = TextEditingController();
     }
   }
@@ -48,7 +52,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
     super.dispose();
   }
 
-  Future<void> _startQuiz() async {
+  Future<void> _startQuiz(LanguageService service) async {
     if (_quizLanguage == null) {
       setState(() => _message = 'Bitte wählen Sie eine Abfragesprache.');
       return;
@@ -76,14 +80,14 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
       final randomId = allIds[Random().nextInt(allIds.length)];
       Vocabulary vocab = await widget.supabaseService.fetchVocabularyById(randomId);
 
-      while(vocab.getWordsFor(_quizLanguage!).isEmpty) 
+      while(vocab.getWordsFor(_quizLanguage!, service).isEmpty) 
       {
         final randomId = allIds[Random().nextInt(allIds.length)];
         vocab = await widget.supabaseService.fetchVocabularyById(randomId);
       }
 
       // Prüfen, ob das Quellwort in der gewählten Sprache überhaupt existiert
-      if (vocab.getWordsFor(_quizLanguage!).isEmpty) {
+      if (vocab.getWordsFor(_quizLanguage!, service).isEmpty) {
           setState(() => _message = 'ID $randomId geladen, aber kein Wort in ${_quizLanguage!} vorhanden. Versuchen Sie es erneut.');
           return;
       }
@@ -101,11 +105,11 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
     }
   }
 
-  void _checkAnswer() {
+  void _checkAnswer(LanguageService service) {
     if (_currentVocabulary == null || _quizLanguage == null) return;
     
     // Wir prüfen alle Sprachen außer der Quellsprache
-    final requiredLanguages = AppLanguages.all.where((l) => l != _quizLanguage).toList();
+    final requiredLanguages = service.all.where((l) => l != _quizLanguage).toList();
     
     int correctAnswers = 0;
     String feedback = '';
@@ -113,7 +117,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
     for (var lang in requiredLanguages) {
       final userInput = _answerControllers[lang]!.text.trim().toLowerCase();
       // Hole die korrekten Lösungen aus dem lokalen Objekt
-      final validWords = _currentVocabulary!.getWordsFor(lang).map((w) => w.toLowerCase()).toList();
+      final validWords = _currentVocabulary!.getWordsFor(lang, service).map((w) => w.toLowerCase()).toList();
       
       final isCorrect = validWords.contains(userInput);
       if (isCorrect) correctAnswers++;
@@ -140,7 +144,8 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
   @override
   Widget build(BuildContext context) {
     // Sprachen, die eingegeben werden müssen (alles außer Quizsprache)
-    final answerLanguages = AppLanguages.all.where((l) => l != _quizLanguage).toList();
+    final languageService = context.read<LanguageService>();
+    final answerLanguages = languageService.all.where((l) => l != _quizLanguage).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -151,7 +156,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
           DropdownButtonFormField<AppLanguage>(
             initialValue: _quizLanguage,
             decoration: const InputDecoration(labelText: 'Abfragewort (Sprache)'),
-            items: AppLanguages.all.map((l) => DropdownMenuItem(value: l, child: Text(l.toString()))).toList(),
+            items: languageService.all.map((l) => DropdownMenuItem(value: l, child: Text(l.toString()))).toList(),
             onChanged: (val) => setState(() => _quizLanguage = val),
           ),
           Row(
@@ -168,7 +173,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
           FractionallySizedBox(
                 widthFactor: 0.25, // Button nimmt 60% der Bildschirmbreite ein
                 child: ElevatedButton(
-                onPressed: _isLoading ? null : _startQuiz,
+                onPressed: () => _isLoading ? null : _startQuiz(languageService),
                 child: const Text('Zufällige Vokabel abfragen'),
             ),
           ),
@@ -185,7 +190,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
                    const Text('Was bedeutet:', style: TextStyle(color: Colors.grey)),
                    // Zeige das erste Wort der Quellsprache an
                    Text(
-                     _currentVocabulary!.getWordsFor(_quizLanguage!).first, 
+                     _currentVocabulary!.getWordsFor(_quizLanguage!, languageService).first, 
                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
                    ),
                  ],
@@ -207,7 +212,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
 
              ElevatedButton(
                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-               onPressed: _checkAnswer,
+               onPressed: () => _checkAnswer(languageService),
                child: const Text('Prüfen'),
              )
           ],

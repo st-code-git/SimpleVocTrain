@@ -8,6 +8,8 @@ import 'screens/login_page.dart';
 import 'screens/password_reset_screen.dart';
 import 'screens/settings_page.dart';
 import 'services/supabase_service.dart';
+import 'services/language_service.dart';
+import 'package:provider/provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // const String supabaseUrl = '';
@@ -17,8 +19,18 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.instance.init(); // Initialisierung
-  await AppLanguages.loadUserLanguagesFromDb();
-  runApp(const MyApp());
+  runApp(
+    // 2. Provider Setup um die App wickeln
+    MultiProvider(
+      providers: [
+        // Hier wird der Service erstellt UND sofort die Lade-Methode gestartet
+        ChangeNotifierProvider(
+          create: (_) => LanguageService()..loadLanguages(), 
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 

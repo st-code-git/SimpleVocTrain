@@ -1,4 +1,6 @@
 import 'package:simple_voc_train/screens/settings_page.dart';
+import '../models/app_language.dart';
+import '../services/language_service.dart';
 
 // Import für AppLanguage
 
@@ -41,13 +43,13 @@ class Vocabulary {
   }
 
   // Gibt die Wörter für eine bestimmte Sprache zurück
-  List<String> getWordsFor(AppLanguage lang) {
-    if (lang == AppLanguages.language_1) {
-      return wordsDe;
-    } else if (lang == AppLanguages.language_2) {
-      return wordsEn;
-    } else if (lang == AppLanguages.language_3) {
-      return wordsEs;
+  List<String> getWordsFor(AppLanguage lang, LanguageService service) {
+    if (lang == service.lang1) {
+      return wordsDe; // oder wie deine Liste für Slot 1 heißt
+    } else if (lang == service.lang2) {
+      return wordsEn; // für Slot 2
+    } else if (lang == service.lang3) {
+      return wordsEs; // für Slot 3
     } else {
       return [];
     }

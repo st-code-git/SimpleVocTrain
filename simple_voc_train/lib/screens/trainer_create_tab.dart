@@ -1,10 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/supabase_service.dart';
+import '../services/language_service.dart'; 
 import '../models/vocabulary.dart';
+import '../models/app_language.dart';
 import 'package:postgrest/postgrest.dart';
 import 'settings_page.dart';
+
 
 enum CreationMode { createNew, extendExisting }
 
@@ -29,13 +33,26 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
   String? _message;
   bool _isLoading = false;
 
+  bool _isInit = true; // Hilfsvariable, damit wir Controller nicht doppelt erstellen
+
   @override
-  void initState() {
-    super.initState();
-    for (var lang in AppLanguages.all) {
-      _controllers[lang] = List.generate(5, (_) => TextEditingController());
-  }
-    _loadIds();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_isInit) {
+      // Hier ist der Context sicher verfügbar!
+      final languageService = context.read<LanguageService>();
+      
+      for (var lang in languageService.all) {
+        // Nur erstellen, wenn noch nicht vorhanden
+        if (!_controllers.containsKey(lang)) {
+           _controllers[lang] = List.generate(5, (_) => TextEditingController());
+        }
+      }
+      
+      _loadIds(); // Deine Lade-Methode
+      _isInit = false; // Damit es nicht bei jedem Rebuild neu läuft
+    }
   }
   
   @override
@@ -66,7 +83,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     }
   }
 
-  Future<void> _loadExistingSet(int id) async {
+  Future<void> _loadExistingSet(int id, LanguageService service) async {
     setState(() => _isLoading = true);
     _clearFields();
     try {
@@ -78,10 +95,10 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
           _controllers[lang]![i].text = words[i];
         }
       }
-      fill(AppLanguages.language_1, vocab.wordsDe);
-      fill(AppLanguages.language_2, vocab.wordsEn);
-      fill(AppLanguages.language_3, vocab.wordsEs);
-      
+      fill(service.lang1, vocab.wordsDe);
+      fill(service.lang2, vocab.wordsEn);
+      fill(service.lang3, vocab.wordsEs);
+
       setState(() => _message = 'Daten für ID $id geladen.');
     } catch (e) {
       setState(() => _message = 'Fehler: $e');
@@ -96,7 +113,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     }
   }
 
-  Future<void> _save() async {
+  Future<void> _save(LanguageService service) async {
     setState(() { _isLoading = true; _message = null; });
 
     // 1. Großes Datenobjekt bauen
@@ -114,9 +131,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     }
 
     // Mapping anwenden
-    collect(AppLanguages.language_1, 'word', "ger");          // Wort1...
-    collect(AppLanguages.language_2, 'word', 'en');   // word_1_en...
-    collect(AppLanguages.language_3, 'word', 'es');   // word_1_es...
+    collect(service.lang1, 'word', "ger");          // Wort1...
+    collect(service.lang2, 'word', 'en');   // word_1_en...
+    collect(service.lang3 , 'word', 'es');   // word_1_es...
 
     try {
       if (_mode == CreationMode.createNew) {
@@ -143,6 +160,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
         
         @override
         Widget build(BuildContext context) {
+
+          final languageService = context.watch<LanguageService>();
+
           return Scaffold(
             appBar: AppBar(title: const Text('Trainer erstellen')),
             body: _isLoading
@@ -220,7 +240,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                                             onChanged: (id) {
                                               if (id != null) {
                                                 setState(() => _selectedId = id);
-                                                _loadExistingSet(id);
+                                                _loadExistingSet(id, context.read<LanguageService>());
                                               }
                                             },
                                           ),
@@ -237,7 +257,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                         // 1. Wir im Modus 'Neues Set' sind.
                         // 2. Wir im Modus 'Erweitern' sind UND bereits ein Set ausgewählt (_selectedId != null) wurde.
                         if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
-                        ...AppLanguages.all.map((lang) {
+                        ...languageService.all.map((lang) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -257,7 +277,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
 
                         // Bedingte Anzeige des Speicher-Buttons (Save button)
                         if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
-                        ElevatedButton(onPressed: _save, child: const Text('Speichern')),
+                        ElevatedButton(onPressed: () => _save(context.read<LanguageService>()), child: const Text('Speichern')),
                                               
                         // Message
                         if (_message != null)

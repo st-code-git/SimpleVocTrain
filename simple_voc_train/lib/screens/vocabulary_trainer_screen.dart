@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../main.dart'; // Zugriff auf den globalen 'supabase' Client
-import '../services/supabase_service.dart';
 import 'trainer_query_tab.dart';
 import 'trainer_create_tab.dart';
 import '../screens/settings_page.dart';
+import '../models/vocabulary.dart';
+import '../models/app_language.dart';
+import '../services/supabase_service.dart';
+import '../services/language_service.dart';
+import 'package:provider/provider.dart';
 
 class VocabularyTrainerScreen extends StatefulWidget {
   const VocabularyTrainerScreen({super.key});
@@ -25,6 +29,9 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    final languageService = context.read<LanguageService>();
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -63,7 +70,7 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
             TrainerQueryTab(
               supabaseService: _supabaseService,
               // Wir geben eine Standardsprache mit, können sie aber im Tab ändern
-              currentLanguage: AppLanguages.language_1, 
+              currentLanguage: languageService.lang1,
             ),
             
             // Tab 2: Anlegen / Bearbeiten

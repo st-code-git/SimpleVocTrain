@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vocabulary.dart';
+import '../models/app_language.dart';
 import '../screens/settings_page.dart';
+import '../screens/trainer_query_tab.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
@@ -128,26 +130,7 @@ class SupabaseService {
     }
   }
 
-//  Future<List<AppLanguage>> loadUserLanguages() async {
-//   final supabase = Supabase.instance.client;
-//   final user = supabase.auth.currentUser;
 
-//   if (user == null) return []; // Kein eingeloggter User
-
-//   final response = await supabase
-//       .from('user_config')
-//       .select('lang_1, lang_2, lang_3')
-//       .eq('uid', user.id)
-//       .maybeSingle();
-
-//   if (response == null) return []; // Keine Config gefunden
-
-//   return [
-//     AppLanguage.fromMap({'label': response['lang_1']}),
-//     AppLanguage.fromMap({'label': response['lang_2']}),
-//     AppLanguage.fromMap({'label': response['lang_3']}),
-//   ];
-// }
 
   Future<bool> saveUserLanguages({
     required AppLanguage lang1,
