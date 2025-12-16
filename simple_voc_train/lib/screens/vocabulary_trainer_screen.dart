@@ -13,13 +13,14 @@ class VocabularyTrainerScreen extends StatefulWidget {
 }
 
 class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
-  // Wir erstellen den Service hier einmalig
+  // Singleton verwenden, keine neue Instanz nötig
   late final SupabaseService _supabaseService;
 
   @override
   void initState() {
     super.initState();
-    _supabaseService = SupabaseService(supabase);
+    // Lazy-initialisierte Singleton-Instanz holen
+    _supabaseService = SupabaseService.instance;
   }
 
   @override

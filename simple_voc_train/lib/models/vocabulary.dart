@@ -1,6 +1,6 @@
 import 'package:simple_voc_train/screens/settings_page.dart';
 
-import '../services/supabase_service.dart'; // Import für AppLanguage
+// Import für AppLanguage
 
 class Vocabulary {
   final int id;

@@ -40,7 +40,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
   
   @override
   void dispose() {
-    _controllers.values.forEach((l) => l.forEach((c) => c.dispose()));
+    for (var l in _controllers.values) {
+      l.forEach((c) => c.dispose());
+    }
     super.dispose();
   }
 
@@ -89,7 +91,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
   }
 
   void _clearFields() {
-    _controllers.values.forEach((l) => l.forEach((c) => c.clear()));
+    for (var l in _controllers.values) {
+      l.forEach((c) => c.clear());
+    }
   }
 
   Future<void> _save() async {
@@ -245,11 +249,11 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                                         controller: e.value
                                         //  decoration: InputDecoration(labelText: '${lang.label} ${e.key + 1}'),
                                       ))
-                                  .toList(),
+                                  ,
                               const SizedBox(height: 16),
                             ],
                           );
-                        }).toList(),
+                        }),
 
                         // Bedingte Anzeige des Speicher-Buttons (Save button)
                         if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))

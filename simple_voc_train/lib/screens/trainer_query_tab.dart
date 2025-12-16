@@ -42,7 +42,9 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
 
   @override
   void dispose() {
-    _answerControllers.values.forEach((c) => c.dispose());
+    for (var c in _answerControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -56,7 +58,9 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
       _isLoading = true;
       _message = 'Suche zufällige Vokabel...';
       _currentVocabulary = null;
-      _answerControllers.values.forEach((c) => c.clear());
+      for (var c in _answerControllers.values) {
+        c.clear();
+      }
     });
 
     try {
@@ -145,7 +149,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
         children: [
           // Einstellungen
           DropdownButtonFormField<AppLanguage>(
-            value: _quizLanguage,
+            initialValue: _quizLanguage,
             decoration: const InputDecoration(labelText: 'Abfragewort (Sprache)'),
             items: AppLanguages.all.map((l) => DropdownMenuItem(value: l, child: Text(l.toString()))).toList(),
             onChanged: (val) => setState(() => _quizLanguage = val),
