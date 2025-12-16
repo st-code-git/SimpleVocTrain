@@ -1,7 +1,10 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../models/vocabulary.dart';
 import 'package:postgrest/postgrest.dart';
+import 'settings_page.dart';
 
 enum CreationMode { createNew, extendExisting }
 
@@ -17,9 +20,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
   CreationMode _mode = CreationMode.createNew;
   
   // Map von Sprache -> Liste von 5 Controllern
-  final Map<AppLanguage2, List<TextEditingController>> _controllers = {};
+  final Map<AppLanguage, List<TextEditingController>> _controllers = {};
   
-  // ÄNDERUNG 1: Statt nur IDs speichern wir die ganzen Objekte für das Dropdown
+  //Statt nur IDs speichern wir die ganzen Objekte für das Dropdown
   List<Vocabulary> _availableSets = [];
   int? _selectedId;
   
@@ -29,9 +32,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
   @override
   void initState() {
     super.initState();
-    for (var lang in AppLanguage2.values) {
+    for (var lang in AppLanguages.all) {
       _controllers[lang] = List.generate(5, (_) => TextEditingController());
-    }
+  }
     _loadIds();
   }
   
@@ -51,7 +54,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
       setState(() {
         _availableSets = sets;
         // Prüfen, ob die gewählte ID noch existiert
-        if (!_availableSets.any((s) => s.id == _selectedId)) {
+        if (!_availableSets.any((s) => s.id == _selectedId) || _availableSets.isEmpty) {
           _selectedId = null;
         }
       });
@@ -68,14 +71,14 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
       final vocab = await widget.supabaseService.fetchVocabularyById(id);
       
       // Felder befüllen
-      void fill(AppLanguage2 lang, List<String> words) {
+      void fill(AppLanguage lang, List<String> words) {
         for (int i = 0; i < words.length && i < 5; i++) {
           _controllers[lang]![i].text = words[i];
         }
       }
-      fill(AppLanguage2.german, vocab.wordsDe);
-      fill(AppLanguage2.english, vocab.wordsEn);
-      fill(AppLanguage2.spanish, vocab.wordsEs);
+      fill(AppLanguages.language_1, vocab.wordsDe);
+      fill(AppLanguages.language_2, vocab.wordsEn);
+      fill(AppLanguages.language_3, vocab.wordsEs);
       
       setState(() => _message = 'Daten für ID $id geladen.');
     } catch (e) {
@@ -96,7 +99,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     final Map<String, dynamic> data = {};
 
     // Helper: Liest Controller aus und schreibt in die korrekten Spaltennamen
-    void collect(AppLanguage2 lang, String prefix, [String suffix = '']) {
+    void collect(AppLanguage lang, String prefix, [String suffix = '']) {
       final list = _controllers[lang]!;
       for (int i = 0; i < 5; i++) {
         final text = list[i].text.trim();
@@ -107,9 +110,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     }
 
     // Mapping anwenden
-    collect(AppLanguage2.german, 'word', "ger");          // Wort1...
-    collect(AppLanguage2.english, 'word', 'en');   // word_1_en...
-    collect(AppLanguage2.spanish, 'word', 'es');   // word_1_es...
+    collect(AppLanguages.language_1, 'word', "ger");          // Wort1...
+    collect(AppLanguages.language_2, 'word', 'en');   // word_1_en...
+    collect(AppLanguages.language_3, 'word', 'es');   // word_1_es...
 
     try {
       if (_mode == CreationMode.createNew) {
@@ -133,7 +136,7 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
             setState(() => _isLoading = false);
           }
         }
-      
+        
         @override
         Widget build(BuildContext context) {
           return Scaffold(
@@ -166,37 +169,71 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Dropdown for existing sets
-                        if (_mode == CreationMode.extendExisting)
-                          Align(
-                          alignment: Alignment.topRight, // Erzwingt die Ausrichtung der Column nach links
-                          child: Column(
-                          //mainAxisSize: MainAxisSize.min,
-                          //crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              DropdownButton<int>(
-                                hint: const Text('Wort zum bearbeiten wählen'),
-                                value: _selectedId,
-                                items: _availableSets
-                                    .map((set) => DropdownMenuItem(
-                                          value: set.id,
-                                          child: Text(set.wordsDe.first),
-                                        ))
-                                    .toList(),
-                                onChanged: (id) {
-                                  if (id != null) {
-                                    setState(() => _selectedId = id);
-                                    _loadExistingSet(id);
+
+      
+    // Dropdown for existing sets
+                          if (_mode == CreationMode.extendExisting )
+                              Builder(
+                                builder: (context) {
+                                  // Prüft, ob überhaupt Sets existieren, die angezeigt werden können.
+                                  // Wir filtern hier bereits alle Sets heraus, die keine deutschen Worte haben.
+                                  final validSets = _availableSets.where((set) => set.wordsDe.isNotEmpty).toList();
+
+                                  if (validSets.isEmpty)
+                                  {
+                                    return Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: const Text(
+                                          'Keine Worte vorhanden',
+                                          style: TextStyle(color: Colors.grey, fontSize: 24,)
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  else
+                                  {
+                                    return Align(
+                                      alignment: Alignment.topRight,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          DropdownButton<int>(
+                                            hint: const Text('Wort zum bearbeiten wählen'),
+                                            // Stellt sicher, dass die ID noch in der Liste der validen Sets existiert
+                                            value: validSets.any((set) => set.id == _selectedId)
+                                                ? _selectedId
+                                                : null,
+                                            items: validSets // <-- Wir verwenden jetzt die gefilterte Liste
+                                                .map((set) => DropdownMenuItem(
+                                                      value: set.id,
+                                                      // Sicherer Zugriff, da wir Set.wordsDe.isNotEmpty geprüft haben
+                                                      child: Text(set.wordsDe.first),
+                                                    ))
+                                                .toList(),
+                                            onChanged: (id) {
+                                              if (id != null) {
+                                                setState(() => _selectedId = id);
+                                                _loadExistingSet(id);
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
                                   }
                                 },
                               ),
-                              const SizedBox(height: 16),
-                            ],
-                          )),
+                                
                         
-                        // Input fields
-                        ...AppLanguage2.values.map((lang) {
+                        // Bedingte Anzeige der Eingabefelder (Input fields)
+                        // Sie werden angezeigt, wenn:
+                        // 1. Wir im Modus 'Neues Set' sind.
+                        // 2. Wir im Modus 'Erweitern' sind UND bereits ein Set ausgewählt (_selectedId != null) wurde.
+                        if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
+                        ...AppLanguages.all.map((lang) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -206,17 +243,25 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
                                   .entries
                                   .map((e) => TextField(
                                         controller: e.value
-                                      //  decoration: InputDecoration(labelText: '${lang.label} ${e.key + 1}'),
+                                        //  decoration: InputDecoration(labelText: '${lang.label} ${e.key + 1}'),
                                       ))
                                   .toList(),
                               const SizedBox(height: 16),
                             ],
                           );
                         }).toList(),
-                        
-                        // Save button
+
+                        // Bedingte Anzeige des Speicher-Buttons (Save button)
+                        if (_mode == CreationMode.createNew || (_mode == CreationMode.extendExisting && _selectedId != null))
                         ElevatedButton(onPressed: _save, child: const Text('Speichern')),
-                        
+                                              
+                        // Message
+                        if (_message != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(_message!, style: const TextStyle(color: Colors.red)),
+                        ),
+                                              
                         // Message
                         if (_message != null)
                           Padding(
@@ -230,13 +275,13 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
         }
       }
 
-      enum AppLanguage2 {
-        german('Deutsch', 'de'),
-        english('English', 'en'),
-        spanish('Español', 'es');
+
+      // enum AppLanguage2 {
+      //   german('Deutsch'),
+      //   english('English'),
+      //   spanish('Español');
       
-        final String label;
-        final String code;
-        const AppLanguage2(this.label, this.code);
-      }
+      //   final String label;
+      //   const AppLanguage2(this.label);
+      // }
       

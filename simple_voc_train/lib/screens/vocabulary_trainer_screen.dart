@@ -3,6 +3,7 @@ import '../main.dart'; // Zugriff auf den globalen 'supabase' Client
 import '../services/supabase_service.dart';
 import 'trainer_query_tab.dart';
 import 'trainer_create_tab.dart';
+import '../screens/settings_page.dart';
 
 class VocabularyTrainerScreen extends StatefulWidget {
   const VocabularyTrainerScreen({super.key});
@@ -27,23 +28,23 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Vokabeltrainer Master'),
+          title: const Text('easyvoc - einfach Vokabeln lernen'),
           
-          actions: [
+          actions: [         
             IconButton(
-              icon: const Icon(Icons.logout), // Das Icon (z.B. Logout Tür)
-              tooltip: 'Ausloggen', // Text beim Gedrückthalten
-              onPressed: () async {
-                await _supabaseService.signOut();
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.menu), // Das Icon (z.B. Refresh)
-              tooltip: 'Konfiguration', // Text beim Gedrückthalten
+              icon: const Icon(Icons.menu), 
+              tooltip: 'Konfiguration', 
               onPressed: () {
                 setState(() {
                   navigatorKey.currentState?.pushNamed('/settings-page');
                 });
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Ausloggen',
+              onPressed: () async {
+                await _supabaseService.signOut();
               },
             ),
         ],
@@ -61,11 +62,10 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
             TrainerQueryTab(
               supabaseService: _supabaseService,
               // Wir geben eine Standardsprache mit, können sie aber im Tab ändern
-              currentLanguage: AppLanguage1.german, 
+              currentLanguage: AppLanguages.language_1, 
             ),
             
             // Tab 2: Anlegen / Bearbeiten
-            // HIER WAR DER FEHLER: Wir übergeben keine 'currentLanguage' mehr!
             TrainerCreateTab(
               supabaseService: _supabaseService,
             ),

@@ -1,3 +1,5 @@
+import 'package:simple_voc_train/screens/settings_page.dart';
+
 import '../services/supabase_service.dart'; // Import für AppLanguage
 
 class Vocabulary {
@@ -39,11 +41,15 @@ class Vocabulary {
   }
 
   // Gibt die Wörter für eine bestimmte Sprache zurück
-  List<String> getWordsFor(AppLanguage1 lang) {
-    switch (lang) {
-      case AppLanguage1.german: return wordsDe;
-      case AppLanguage1.english: return wordsEn;
-      case AppLanguage1.spanish: return wordsEs;
+  List<String> getWordsFor(AppLanguage lang) {
+    if (lang == AppLanguages.language_1) {
+      return wordsDe;
+    } else if (lang == AppLanguages.language_2) {
+      return wordsEn;
+    } else if (lang == AppLanguages.language_3) {
+      return wordsEs;
+    } else {
+      return [];
     }
   }
 }

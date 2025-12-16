@@ -2,14 +2,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vocabulary.dart';
 
 // Enum definieren (wird hier und im Model genutzt)
-enum AppLanguage1 {
-  german('Deutsch'),
-  english('Englisch'),
-  spanish('Spanisch');
+// enum AppLanguage1 {
+//   german('Deutsch'),
+//   english('Englisch'),
+//   spanish('Spanisch');
 
-  final String displayName;
-  const AppLanguage1(this.displayName);
-}
+//   final String displayName;
+//   const AppLanguage1(this.displayName);
+// }
 
 class SupabaseService {
   final SupabaseClient supabase;
