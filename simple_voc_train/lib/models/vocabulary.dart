@@ -1,4 +1,3 @@
-import 'package:simple_voc_train/screens/settings_page.dart';
 import '../models/app_language.dart';
 import '../services/language_service.dart';
 

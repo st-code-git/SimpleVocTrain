@@ -5,7 +5,7 @@ import '../models/app_language.dart';
 import '../services/supabase_service.dart';
 import '../services/language_service.dart';
 import 'package:provider/provider.dart';
-import '../screens/settings_page.dart';
+
 
 enum RequiredAnswers { all, one }
 
@@ -142,88 +142,123 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // Sprachen, die eingegeben werden müssen (alles außer Quizsprache)
-    final languageService = context.read<LanguageService>();
-    final answerLanguages = languageService.all.where((l) => l != _quizLanguage).toList();
+Widget build(BuildContext context) {
+  // 1. WICHTIG: .watch() verwenden, damit das Widget neu baut, wenn Daten geladen sind
+  final languageService = context.watch<LanguageService>();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Einstellungen
-          DropdownButtonFormField<AppLanguage>(
-            initialValue: _quizLanguage,
-            decoration: const InputDecoration(labelText: 'Abfragewort (Sprache)'),
-            items: languageService.all.map((l) => DropdownMenuItem(value: l, child: Text(l.toString()))).toList(),
-            onChanged: (val) => setState(() => _quizLanguage = val),
-          ),
-          Row(
-            children: [
-               Expanded(child: RadioListTile(
-                 title: const Text('Alle lösen'), value: RequiredAnswers.all, 
-                 groupValue: _requiredAnswers, onChanged: (v) => setState(() => _requiredAnswers = v!))),
-               Expanded(child: RadioListTile(
-                 title: const Text('Eins reicht'), value: RequiredAnswers.one, 
-                 groupValue: _requiredAnswers, onChanged: (v) => setState(() => _requiredAnswers = v!))),
-            ],
-          ),
-          const Divider(height: 30, thickness: 0, color: Colors.transparent,),
-          FractionallySizedBox(
-                widthFactor: 0.25, // Button nimmt 60% der Bildschirmbreite ein
-                child: ElevatedButton(
-                onPressed: () => _isLoading ? null : _startQuiz(languageService),
-                child: const Text('Zufällige Vokabel abfragen'),
-            ),
-          ),
-          const Divider(height: 30, color: Colors.transparent,),
-          const Divider(height: 30),
+  // 2. Lade-Schutz
+  if (languageService.isLoading) {
+    return const Center(child: CircularProgressIndicator());
+  }
 
-          // Abfrage UI
-          if (_currentVocabulary != null && _quizLanguage != null) ...[
-             Container(
-               padding: const EdgeInsets.all(16),
-               color: Colors.blue.shade50,
-               child: Column(
-                 children: [
-                   const Text('Was bedeutet:', style: TextStyle(color: Colors.grey)),
-                   // Zeige das erste Wort der Quellsprache an
-                   Text(
-                     _currentVocabulary!.getWordsFor(_quizLanguage!, languageService).first, 
-                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
-                   ),
-                 ],
+  // 3. Berechnung der aktuell ausgewählten Sprache (Sicherheits-Logik)
+  // Fallback auf Sprache 1, falls noch nichts gewählt ist.
+  // Hinweis: Falls dein Getter im Service 'language_1' heißt, hier anpassen.
+  AppLanguage selectedValue = _quizLanguage ?? languageService.lang1;
+
+  // Sicherheitscheck: Ist der Wert wirklich in der aktuellen Liste enthalten?
+  // Falls nein (z.B. nach einem DB-Update), setze auf den ersten verfügbaren Wert zurück.
+  if (!languageService.all.contains(selectedValue)) {
+    selectedValue = languageService.all.first;
+    // Optional: Auch den State direkt korrigieren, damit es beim nächsten Mal stimmt
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   setState(() => _quizLanguage = selectedValue);
+    // });
+  }
+
+  // 4. Berechnung der Antwortsprachen basierend auf der SICHEREN Auswahl
+  final answerLanguages = languageService.all.where((l) => l != selectedValue).toList();
+
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(16.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // --- Einstellungen ---
+        DropdownButtonFormField<AppLanguage>(
+          // WICHTIG: 'value' nutzen statt 'initialValue' für Reaktivität
+          value: selectedValue, 
+          decoration: const InputDecoration(labelText: 'Abfragewort (Sprache)'),
+          items: languageService.all.map((l) => DropdownMenuItem(
+            value: l, 
+            child: Text(l.toString())
+          )).toList(),
+          onChanged: (val) {
+            // State aktualisieren, wenn User wählt
+            setState(() => _quizLanguage = val);
+          },
+        ),
+        
+        Row(
+          children: [
+             Expanded(child: RadioListTile(
+               title: const Text('Alle lösen'), value: RequiredAnswers.all, 
+               groupValue: _requiredAnswers, onChanged: (v) => setState(() => _requiredAnswers = v!))),
+             Expanded(child: RadioListTile(
+               title: const Text('Eins reicht'), value: RequiredAnswers.one, 
+               groupValue: _requiredAnswers, onChanged: (v) => setState(() => _requiredAnswers = v!))),
+          ],
+        ),
+        
+        const Divider(height: 30, thickness: 0, color: Colors.transparent,),
+        
+        FractionallySizedBox(
+              widthFactor: 0.25,
+              child: ElevatedButton(
+              // Button deaktivieren, wenn isLoading (optional, hier über Variable _isLoading gesteuert)
+              onPressed: _isLoading ? null : () => _startQuiz(languageService),
+              child: const Text('Zufällige Vokabel abfragen'),
+          ),
+        ),
+        
+        const Divider(height: 30, color: Colors.transparent,),
+        const Divider(height: 30),
+
+        // --- Abfrage UI ---
+        // Wir nutzen hier 'selectedValue', damit es auch angezeigt wird, wenn _quizLanguage noch null war (Fallback)
+        if (_currentVocabulary != null) ...[
+           Container(
+             padding: const EdgeInsets.all(16),
+             color: Colors.blue.shade50,
+             child: Column(
+               children: [
+                 const Text('Was bedeutet:', style: TextStyle(color: Colors.grey)),
+                 // Zeige das Wort in der aktuell ausgewählten Sprache (selectedValue)
+                 Text(
+                   _currentVocabulary!.getWordsFor(selectedValue, languageService).first, 
+                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
+                 ),
+               ],
+             ),
+           ),
+           const SizedBox(height: 20),
+           
+           // Eingabefelder für die Zielsprachen (basierend auf der berechneten Liste)
+           ...answerLanguages.map((lang) => Padding(
+             padding: const EdgeInsets.only(bottom: 10),
+             child: TextField(
+               controller: _answerControllers[lang],
+               decoration: InputDecoration(
+                 labelText: 'Übersetzung in ${lang.toString()}',
+                 border: const OutlineInputBorder(),
                ),
              ),
-             const SizedBox(height: 20),
-             
-             // Eingabefelder für die Zielsprachen
-             ...answerLanguages.map((lang) => Padding(
-               padding: const EdgeInsets.only(bottom: 10),
-               child: TextField(
-                 controller: _answerControllers[lang],
-                 decoration: InputDecoration(
-                   labelText: 'Übersetzung in ${lang.toString()}',
-                   border: const OutlineInputBorder(),
-                 ),
-               ),
-             )),
+           )),
 
-             ElevatedButton(
-               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-               onPressed: () => _checkAnswer(languageService),
-               child: const Text('Prüfen'),
-             )
-          ],
-
-          if (_message != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 20),
-              child: Text(_message!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
+           ElevatedButton(
+             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+             onPressed: () => _checkAnswer(languageService),
+             child: const Text('Prüfen'),
+           )
         ],
-      ),
-    );
-  }
+
+        if (_message != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Text(_message!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+      ],
+    ),
+  );
+}
 }

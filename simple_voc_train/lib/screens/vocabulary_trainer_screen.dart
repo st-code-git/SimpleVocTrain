@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import '../main.dart'; // Zugriff auf den globalen 'supabase' Client
 import 'trainer_query_tab.dart';
 import 'trainer_create_tab.dart';
-import '../screens/settings_page.dart';
-import '../models/vocabulary.dart';
-import '../models/app_language.dart';
 import '../services/supabase_service.dart';
 import '../services/language_service.dart';
 import 'package:provider/provider.dart';
+
+const String appVersion = String.fromEnvironment(
+  'APP_VERSION', 
+  defaultValue: 'DEV-Mode'
+);
 
 class VocabularyTrainerScreen extends StatefulWidget {
   const VocabularyTrainerScreen({super.key});
@@ -38,7 +40,16 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
         appBar: AppBar(
           title: const Text('easyvoc - einfach Vokabeln lernen'),
           
-          actions: [         
+          actions: [     
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 32.0),
+                child: Text(
+                  'v$appVersion', 
+                  style: const TextStyle(fontSize: 10, color: Colors.black),
+                ),
+              ),
+            ),    
             IconButton(
               icon: const Icon(Icons.menu), 
               tooltip: 'Konfiguration', 

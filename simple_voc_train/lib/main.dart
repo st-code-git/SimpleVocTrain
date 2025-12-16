@@ -12,9 +12,7 @@ import 'services/language_service.dart';
 import 'package:provider/provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-// const String supabaseUrl = '';
-// const String supabaseAnonKey = '';
- //final supabase = Supabase.instance.client;
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

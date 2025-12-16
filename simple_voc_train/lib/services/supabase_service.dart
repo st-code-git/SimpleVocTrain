@@ -1,8 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/vocabulary.dart';
 import '../models/app_language.dart';
-import '../screens/settings_page.dart';
-import '../screens/trainer_query_tab.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
