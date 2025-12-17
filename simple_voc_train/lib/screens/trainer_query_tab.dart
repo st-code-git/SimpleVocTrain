@@ -11,7 +11,6 @@ enum RequiredAnswers { all, one }
 
 class TrainerQueryTab extends StatefulWidget {
   final SupabaseService supabaseService;
-  // currentLanguage wird hier nur noch als Standard für das Dropdown genutzt, falls gewünscht
   final AppLanguage currentLanguage; 
 
   const TrainerQueryTab({
@@ -37,7 +36,7 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
   @override
   void initState() {
     super.initState();
-    _quizLanguage = widget.currentLanguage; // Standard setzen
+    _quizLanguage = widget.currentLanguage; // set standard
      final languageService = context.read<LanguageService>();
     for (var lang in languageService.all) {
       _answerControllers[lang] = TextEditingController();
@@ -68,7 +67,6 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
     });
 
     try {
-      // Sichere Methode: Erst IDs laden, dann eine wählen
       final allIds = await widget.supabaseService.fetchAllIds();
       
       if (allIds.isEmpty || allIds.length == 1) {
@@ -86,7 +84,6 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
         vocab = await widget.supabaseService.fetchVocabularyById(randomId);
       }
 
-      // Prüfen, ob das Quellwort in der gewählten Sprache überhaupt existiert
       if (vocab.getWordsFor(_quizLanguage!, service).isEmpty) {
           setState(() => _message = 'ID $randomId geladen, aber kein Wort in ${_quizLanguage!} vorhanden. Versuchen Sie es erneut.');
           return;
@@ -108,7 +105,6 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
   void _checkAnswer(LanguageService service) {
     if (_currentVocabulary == null || _quizLanguage == null) return;
     
-    // Wir prüfen alle Sprachen außer der Quellsprache
     final requiredLanguages = service.all.where((l) => l != _quizLanguage).toList();
     
     int correctAnswers = 0;
@@ -116,7 +112,6 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
 
     for (var lang in requiredLanguages) {
       final userInput = _answerControllers[lang]!.text.trim().toLowerCase();
-      // Hole die korrekten Lösungen aus dem lokalen Objekt
       final validWords = _currentVocabulary!.getWordsFor(lang, service).map((w) => w.toLowerCase()).toList();
       
       final isCorrect = validWords.contains(userInput);
@@ -143,7 +138,6 @@ class _TrainerQueryTabState extends State<TrainerQueryTab> {
 
   @override
 Widget build(BuildContext context) {
-  // 1. WICHTIG: .watch() verwenden, damit das Widget neu baut, wenn Daten geladen sind
   final languageService = context.watch<LanguageService>();
 
   // 2. Lade-Schutz
@@ -151,22 +145,12 @@ Widget build(BuildContext context) {
     return const Center(child: CircularProgressIndicator());
   }
 
-  // 3. Berechnung der aktuell ausgewählten Sprache (Sicherheits-Logik)
-  // Fallback auf Sprache 1, falls noch nichts gewählt ist.
-  // Hinweis: Falls dein Getter im Service 'language_1' heißt, hier anpassen.
   AppLanguage selectedValue = _quizLanguage ?? languageService.lang1;
 
-  // Sicherheitscheck: Ist der Wert wirklich in der aktuellen Liste enthalten?
-  // Falls nein (z.B. nach einem DB-Update), setze auf den ersten verfügbaren Wert zurück.
   if (!languageService.all.contains(selectedValue)) {
     selectedValue = languageService.all.first;
-    // Optional: Auch den State direkt korrigieren, damit es beim nächsten Mal stimmt
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   setState(() => _quizLanguage = selectedValue);
-    // });
   }
 
-  // 4. Berechnung der Antwortsprachen basierend auf der SICHEREN Auswahl
   final answerLanguages = languageService.all.where((l) => l != selectedValue).toList();
 
   return SingleChildScrollView(
@@ -174,9 +158,7 @@ Widget build(BuildContext context) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // --- Einstellungen ---
         DropdownButtonFormField<AppLanguage>(
-          // WICHTIG: 'value' nutzen statt 'initialValue' für Reaktivität
           value: selectedValue, 
           decoration: const InputDecoration(labelText: 'Abfragewort (Sprache)'),
           items: languageService.all.map((l) => DropdownMenuItem(
@@ -184,7 +166,6 @@ Widget build(BuildContext context) {
             child: Text(l.toString())
           )).toList(),
           onChanged: (val) {
-            // State aktualisieren, wenn User wählt
             setState(() => _quizLanguage = val);
           },
         ),
@@ -205,7 +186,6 @@ Widget build(BuildContext context) {
         FractionallySizedBox(
               widthFactor: 0.25,
               child: ElevatedButton(
-              // Button deaktivieren, wenn isLoading (optional, hier über Variable _isLoading gesteuert)
               onPressed: _isLoading ? null : () => _startQuiz(languageService),
               child: const Text('Zufällige Vokabel abfragen'),
           ),
@@ -214,8 +194,6 @@ Widget build(BuildContext context) {
         const Divider(height: 30, color: Colors.transparent,),
         const Divider(height: 30),
 
-        // --- Abfrage UI ---
-        // Wir nutzen hier 'selectedValue', damit es auch angezeigt wird, wenn _quizLanguage noch null war (Fallback)
         if (_currentVocabulary != null) ...[
            Container(
              padding: const EdgeInsets.all(16),
@@ -223,7 +201,6 @@ Widget build(BuildContext context) {
              child: Column(
                children: [
                  const Text('Was bedeutet:', style: TextStyle(color: Colors.grey)),
-                 // Zeige das Wort in der aktuell ausgewählten Sprache (selectedValue)
                  Text(
                    _currentVocabulary!.getWordsFor(selectedValue, languageService).first, 
                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
@@ -232,8 +209,7 @@ Widget build(BuildContext context) {
              ),
            ),
            const SizedBox(height: 20),
-           
-           // Eingabefelder für die Zielsprachen (basierend auf der berechneten Liste)
+
            ...answerLanguages.map((lang) => Padding(
              padding: const EdgeInsets.only(bottom: 10),
              child: TextField(

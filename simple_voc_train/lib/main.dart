@@ -16,12 +16,10 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseService.instance.init(); // Initialisierung
+  await SupabaseService.instance.init();
   runApp(
-    // 2. Provider Setup um die App wickeln
     MultiProvider(
       providers: [
-        // Hier wird der Service erstellt UND sofort die Lade-Methode gestartet
         ChangeNotifierProvider(
           create: (_) => LanguageService()..loadLanguages(), 
         ),
@@ -30,7 +28,6 @@ Future<void> main() async {
     ),
   );
 }
-
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -44,15 +41,14 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    
-    // 2. Der Listener für den Invite-Link
+
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final AuthChangeEvent event = data.event;
 
       print("Auth State changed: $event");
 
       if (event == AuthChangeEvent.passwordRecovery) {
-        // Schiebt die Passwort-Seite über alles andere drüber
+
         navigatorKey.currentState?.pushNamed('/update-password-page');
       }
 
@@ -73,11 +69,18 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Vokabel Trainer',
-      navigatorKey: navigatorKey, // <--- Nicht vergessen!
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color.fromARGB(255, 234, 232, 243),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color.fromARGB(255, 234, 232, 243),
+          foregroundColor: Color.fromARGB(255, 0, 0, 0),
+        ),
+      ),
+      navigatorKey: navigatorKey, 
       
-      // 3. Hier definierst du alle Routen
+      // Routes
       routes: {
-        '/': (context) => const AuthGate(), // Startpunkt ist die Weiche
+        '/': (context) => const AuthGate(), 
         '/home': (context) => const VocabularyTrainerScreen(),
         '/login': (context) => const LoginPage(),
         '/update-password-page': (context) => const PasswordResetScreen(),
@@ -87,29 +90,27 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-// 4. Das AuthGate Widget (Die Weiche)
+
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Wir fragen direkt beim Stream ab, damit es sich live aktualisiert
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         
-        // Noch am Laden? Zeige Ladekreis
+        // Loading circle
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        // Haben wir eine Session?
         final session = snapshot.data?.session;
 
         if (session != null) {
-          return const VocabularyTrainerScreen(); // Eingeloggt -> Home
+          return const VocabularyTrainerScreen(); //Logged in
         } else {
-          return const LoginPage(); // Ausgeloggt -> Login
+          return const LoginPage(); //Logged out
         }
       },
     );

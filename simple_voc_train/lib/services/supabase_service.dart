@@ -5,25 +5,21 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
 class SupabaseService {
-  // 1️⃣ Privater Konstruktor
+
   SupabaseService._internal();
 
-  // 2️⃣ Statische Singleton-Instanz
+  //Singleton Pattern
   static final SupabaseService _instance = SupabaseService._internal();
 
-  // 3️⃣ Getter für globale Nutzung
   static SupabaseService get instance => _instance;
 
-  // 4️⃣ Supabase Client (nullable bis init abgeschlossen)
   SupabaseClient? client;
 
-  // 5️⃣ Initialisierung
   Future<void> init() async {
     try {
-      // dotenv laden
+      // load dotenv secrets
       await dotenv.load(fileName: "assets/env");
 
-      // Supabase initialisieren
       await Supabase.initialize(
         url: dotenv.env['SUPABASE_URL']!,
         anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
@@ -32,7 +28,6 @@ class SupabaseService {
         ),
       );
 
-      // Client erst nach Initialisierung setzen
       client = Supabase.instance.client;
 
     } catch (e) {
@@ -40,7 +35,6 @@ class SupabaseService {
     }
   }
 
-  // 6️⃣ Optional: Helfer, um den Client sicher zu holen
   SupabaseClient get safeClient {
     if (client == null) {
       throw Exception(
@@ -49,42 +43,34 @@ class SupabaseService {
     return client!;
   }
 
-  
-  //final SupabaseClient supabase;
-  
-   //Zentraler Tabellenname
+
+   //Central table name
   static const String tableName = 'Vocabulary_Master';
 
-  //SupabaseService(this.supabase);
 
-  // 1. Zählen (für Random ID)
   Future<int> getVocabularyCount() async {
     return await client!.from(tableName).count();
   }
 
-  // 2. Alle IDs holen (für Dropdown-Liste beim Bearbeiten)
   Future<List<int>> fetchAllIds() async {
     final response = await client!.from(tableName).select('id').order('id');
     return (response as List).map((map) => map['id'] as int).toList();
   }
 
-  // 3. Eine komplette Vokabelzeile laden
   Future<Vocabulary> fetchVocabularyById(int id) async {
     final response = await client!
         .from(tableName)
-        .select() // Lädt automatisch alle Spalten (*)
+        .select() 
         .eq('id', id)
         .single();
     
     return Vocabulary.fromJson(response);
   }
 
-  // 4. Anlegen (Insert)
   Future<void> createVocabulary(Map<String, dynamic> data) async {
     await client!.from(tableName).insert(data);
   }
 
-  // 5. Aktualisieren (Update)
   Future<void> updateVocabulary(int id, Map<String, dynamic> data) async {
     await client!.from(tableName).update(data).eq('id', id);
   }
@@ -92,12 +78,11 @@ class SupabaseService {
   Future<List<Vocabulary>> fetchAllVocabulary() async {
     final response = await client!
         .from(tableName)
-        .select(); // Lädt automatisch alle Spalten (*)
+        .select(); 
     
     return response.map<Vocabulary>((json) => Vocabulary.fromJson(json)).toList();
   }
 
-  //Signout Methode
   Future<void> signOut() async {
     await Supabase.instance.client.auth.signOut();
   }
@@ -107,7 +92,6 @@ class SupabaseService {
     if (user == null) return null;
 
     try {
-      // select(...) liefert direkt eine Liste
       final List<Map<String, dynamic>> result = await client!
           .from('user_config')
           .select('lang_1, lang_2, lang_3')
@@ -128,8 +112,6 @@ class SupabaseService {
     }
   }
 
-
-
   Future<bool> saveUserLanguages({
     required AppLanguage lang1,
     required AppLanguage lang2,
@@ -138,15 +120,13 @@ class SupabaseService {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
 
-    if (user == null) return false; // Kein eingeloggter User
+    if (user == null) return false; // No user logged in
 
     final Map<String, dynamic> updates = {
       'lang_1': lang1.toMap()['label']?.toString() ?? '',
       'lang_2': lang2.toMap()['label']?.toString() ?? '',
       'lang_3': lang3.toMap()['label']?.toString() ?? '',
     };
-
-    //await SupabaseService.instance.init();
 
     await client!
         .from('user_config')

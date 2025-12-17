@@ -14,7 +14,6 @@ class AppLanguage {
   @override
   String toString() => label;
 
-  // WICHTIG für Dropdowns: Vergleichsoperatoren überschreiben!
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -25,7 +24,6 @@ class AppLanguage {
   int get hashCode => label.hashCode;
 }
 
-// Hilfsklasse für den Transport aus der DB
 class AppLanguagesData {
   String language1;
   String language2;

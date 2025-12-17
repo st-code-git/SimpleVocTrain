@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider Paket nötig
+import 'package:provider/provider.dart'; 
 import '../services/language_service.dart';
 import 'password_reset_screen.dart';
 
@@ -11,7 +11,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // Controller
+  
   late TextEditingController _lang1Controller;
   late TextEditingController _lang2Controller;
   late TextEditingController _lang3Controller;
@@ -19,7 +19,6 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    // Wir holen uns EINMALIG die aktuellen Werte aus dem Service für die Textfelder
     final service = context.read<LanguageService>();
     
     _lang1Controller = TextEditingController(text: service.lang1.label);
@@ -36,7 +35,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _save() async {
-    // Zugriff auf den Service zum Speichern
     final service = context.read<LanguageService>();
     
     final success = await service.updateLanguages(
@@ -79,15 +77,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Optional: Falls Sie auf Ladezustände im UI reagieren wollen
-    // final isLoading = context.select<LanguageService, bool>((s) => s.isLoading);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Benutzerkonfiguration')),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // --- Passwort ändern ---
           Card(
             elevation: 2,
             child: ListTile(
@@ -104,7 +99,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 32),
 
-          // --- Sprachfelder ---
           Card(
             elevation: 2,
             child: Padding(

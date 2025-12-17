@@ -19,13 +19,13 @@ class VocabularyTrainerScreen extends StatefulWidget {
 }
 
 class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
-  // Singleton verwenden, keine neue Instanz nötig
+  // Singleton 
   late final SupabaseService _supabaseService;
 
   @override
   void initState() {
     super.initState();
-    // Lazy-initialisierte Singleton-Instanz holen
+
     _supabaseService = SupabaseService.instance;
   }
 
@@ -77,14 +77,11 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
         ),
         body: TabBarView(
           children: [
-            // Tab 1: Abfrage
             TrainerQueryTab(
               supabaseService: _supabaseService,
-              // Wir geben eine Standardsprache mit, können sie aber im Tab ändern
               currentLanguage: languageService.lang1,
             ),
-            
-            // Tab 2: Anlegen / Bearbeiten
+
             TrainerCreateTab(
               supabaseService: _supabaseService,
             ),

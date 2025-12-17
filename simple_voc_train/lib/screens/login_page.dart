@@ -9,13 +9,9 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // Controller für die Textfelder
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-
- 
-  // Die signIn Methode, die du brauchst!
   Future<void> _signIn() async {
     try {
       await Supabase.instance.client.auth.signInWithPassword(
@@ -24,11 +20,10 @@ class _LoginPageState extends State<LoginPage> {
       );
       if (!mounted) return;
 
-    // ERFOLG: Weiterleiten zur Hauptseite und Login vergessen
       Navigator.of(context).pushReplacementNamed('/home');
       
     } on AuthException catch (e) {
-      // Fehler anzeigen (z.B. falsches Passwort)
+
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unbekannter Fehler')));
@@ -62,10 +57,9 @@ Widget build(BuildContext context) {
             ),
           ),
 
-          // Spacer: flexible Fläche zwischen oben und Mitte
           const Spacer(),
 
-          // 2️⃣ Mitte
+
           Column(
             children: [
               TextField(
@@ -86,10 +80,8 @@ Widget build(BuildContext context) {
             ],
           ),
 
-          // Spacer: flexible Fläche zwischen Mitte und unten
           const Spacer(),
 
-          // 3️⃣ Unten
           Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Text(

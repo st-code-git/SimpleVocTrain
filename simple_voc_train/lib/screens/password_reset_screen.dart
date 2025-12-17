@@ -9,14 +9,12 @@ class PasswordResetScreen extends StatefulWidget {
 }
 
 class _PasswordResetScreenState extends State<PasswordResetScreen> {
-  // Controller für das Textfeld
+
   final TextEditingController _passwordController = TextEditingController();
   
-  // Status für den Lade-Spinner
   bool _isLoading = false;
 
   Future<void> _updatePassword() async {
-    // 1. Einfache Validierung
     final password = _passwordController.text.trim();
     if (password.isEmpty || password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -30,7 +28,6 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
     });
 
     try {
-      // 2. Dein Code: User Update in Supabase
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(
           password: password,
@@ -39,7 +36,6 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
 
       if (!mounted) return;
 
-      // 3. Erfolg: Feedback geben und zum Dashboard leiten
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Passwort erfolgreich gespeichert!'),
@@ -47,13 +43,11 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
         ),
       );
 
-      // WICHTIG: pushNamedAndRemoveUntil löscht den "Zurück"-Button.
-      // Man soll nach dem Speichern nicht zurück zum Reset-Screen können.
       Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
 
     } catch (e) {
       if (!mounted) return;
-      // 4. Fehlerbehandlung
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Fehler beim Speichern: $e'),
@@ -83,7 +77,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
       ),
       body: Center(
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 400), // Damit es im Web nicht zu breit wird
+          constraints: const BoxConstraints(maxWidth: 400), 
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -102,10 +96,9 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
               ),
               const SizedBox(height: 30),
               
-              // Eingabefeld
               TextField(
                 controller: _passwordController,
-                obscureText: true, // Passwort verstecken
+                obscureText: true, // Hide password input
                 decoration: const InputDecoration(
                   labelText: 'Neues Passwort',
                   border: OutlineInputBorder(),
@@ -114,7 +107,6 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Button
               ElevatedButton(
                 onPressed: _isLoading ? null : _updatePassword,
                 style: ElevatedButton.styleFrom(
