@@ -7,6 +7,7 @@ import '../services/language_service.dart';
 import '../models/vocabulary.dart';
 import '../models/app_language.dart';
 import 'package:postgrest/postgrest.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 enum CreationMode { createNew, extendExisting }
 
@@ -146,22 +147,27 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
           }
         }
         
-        @override
+
+
+
+@override
 Widget build(BuildContext context) {
-
   final languageService = context.watch<LanguageService>();
-
   final currentlyLoading = _isLoading || languageService.isLoading;
 
   return Scaffold(
     appBar: AppBar(title: const Text('Trainer erstellen')),
-    body: currentlyLoading
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+    body: Stack(
+  children: [
+    // EBENE 1: Dein eigentlicher Inhalt (bleibt jetzt immer im Hintergrund bestehen)
+    Positioned.fill(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        // AbsorbPointer blockiert Klicks, solange geladen wird (damit man nicht doppelt klickt)
+        child: AbsorbPointer(
+          absorbing: currentlyLoading, 
+          child: Column(
               children: [
-
                 Row(
                   children: [
                     Expanded(
@@ -187,9 +193,9 @@ Widget build(BuildContext context) {
                 if (_mode == CreationMode.extendExisting)
                   Builder(
                     builder: (context) {
-
                       final mainLang = languageService.lang1;
 
+                      // 1. Liste filtern
                       final validSets = _availableSets.where((set) {
                         return set.getWordsFor(mainLang, languageService).isNotEmpty;
                       }).toList();
@@ -206,37 +212,97 @@ Widget build(BuildContext context) {
                           ),
                         );
                       } else {
-                        return Align(
-                          alignment: Alignment.topRight,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              DropdownButton<int>(
-                                hint: const Text('Wort zum Bearbeiten wählen'),
+                        // 2. Sicheres selectedItem ermitteln
+                        // Nutzt firstWhereOrNull (aus package:collection) oder manuelle Logik
+                        final Vocabulary? currentSelection = _selectedId == null
+                            ? null
+                            : validSets.where((set) => set.id == _selectedId).firstOrNull;
+                        
+                        // Fallback: Wenn ID gesetzt ist, aber nicht in der Liste gefunden wurde -> null setzen
+                        // (Verhindert Absturz durch veraltete IDs)
 
-                                value: validSets.any((set) => set.id == _selectedId)
-                                    ? _selectedId
-                                    : null,
-                                items: validSets.map((set) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24.0),
+                          child: DropdownSearch<Vocabulary>(
+                                  // 1. WICHTIG: Ein Key hilft Flutter, das Widget stabil zu halten
+                                key: const ValueKey('vocab_dropdown'), 
 
-                                  final firstWord = set.getWordsFor(mainLang, languageService).first;
-                                  
-                                  return DropdownMenuItem(
-                                    value: set.id,
-                                    child: Text(firstWord),
-                                  );
-                                }).toList(),
-                                onChanged: (id) {
-                                  if (id != null) {
-                                    setState(() => _selectedId = id);
+                                items: (filter, loadProps) => validSets,
 
-                                    _loadExistingSet(id, languageService); 
+                                compareFn: (item, selectedItem) => item.id == selectedItem.id,
+
+                                // 2. Deine Logik für die Auswahl (mit .where und .firstOrNull ist es sicher)
+                                selectedItem: _selectedId == null
+                                    ? null
+                                    : validSets.where((set) => set.id == _selectedId).firstOrNull,
+
+                                itemAsString: (set) {
+                                  final words = set.getWordsFor(mainLang, languageService);
+                                  return words.isNotEmpty ? words.first : "Unbekannt";
+                                },
+
+                                decoratorProps: const DropDownDecoratorProps(
+
+                                  baseStyle: const TextStyle(
+                                  fontSize: 16,              // <-- Schriftgröße
+                                  // fontWeight: FontWeight.bold, // <-- Fett (Bold)
+                                  // color: Colors.black87,     // Farbe
+                                  ),
+
+                                  decoration: InputDecoration(
+                                    labelText: "Wort zum Bearbeiten wählen",
+
+                                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                                      
+
+
+                                    hintText: "Suchen...",
+                                    // filled: true,
+                                    // fillColor: Colors.blueGrey ,
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                ),
+
+                                // 3. DER FIX: ModalBottomSheet statt Menu
+                                // Das verhindert den "AnimationController disposed" Absturz
+                                popupProps: PopupProps.modalBottomSheet(
+                                  showSearchBox: true,
+                                  searchFieldProps: const TextFieldProps(
+                                    decoration: InputDecoration(
+                                      hintText: "Suchen...",
+                                      prefixIcon: Icon(Icons.search),
+                                      contentPadding: EdgeInsets.all(12),
+                                    ),
+                                  ),
+                                  // Zieht das Fenster nur so hoch wie nötig (max 70% des Screens)
+                                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+                                  modalBottomSheetProps: const ModalBottomSheetProps(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                    ),
+                                  ),
+                                ),
+
+                                onChanged: (set) async {
+                                  if (set != null) {
+       
+                                                                        setState(() {
+                                      _isLoading = true; 
+                                      _selectedId = set.id;
+                                    });
+                                    
+                                    // Lade die Daten
+                                    await _loadExistingSet(set.id, languageService);
+
+                                    if (mounted) {
+                                      setState(() {
+                                        _isLoading = false; 
+                                      });
+                                    }
                                   }
                                 },
-                              ),
-                            ],
-                          ),
+                              )
                         );
                       }
                     },
@@ -245,36 +311,26 @@ Widget build(BuildContext context) {
                 if (_mode == CreationMode.createNew ||
                     (_mode == CreationMode.extendExisting && _selectedId != null))
                   ...languageService.all.map((lang) {
-                    final controllersForLang = _controllers[lang];
-                    if (controllersForLang == null) return const SizedBox.shrink();
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(lang.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ...controllersForLang
-                            .asMap()
-                            .entries
-                            .map((e) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8.0),
-                                  child: TextField(
-                                    controller: e.value,
-                                    // decoration: InputDecoration(
-                                    //   hintText: '${lang.label} Wort ${e.key + 1}',
-                                    //   isDense: true,
-                                    // ),
-                                  ),
-                                )),
-                        const SizedBox(height: 16),
-                      ],
-                    );
+                     // (Dein bestehender Code hier ist okay)
+                     final controllersForLang = _controllers[lang];
+                     if (controllersForLang == null) return const SizedBox.shrink();
+                     return Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text(lang.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                         ...controllersForLang.asMap().entries.map((e) => Padding(
+                               padding: const EdgeInsets.only(bottom: 8.0),
+                               child: TextField(controller: e.value),
+                             )),
+                         const SizedBox(height: 16),
+                       ],
+                     );
                   }),
 
                 if (_mode == CreationMode.createNew ||
                     (_mode == CreationMode.extendExisting && _selectedId != null))
                   ElevatedButton(
-
-                    onPressed: () => _save(languageService), 
+                    onPressed: () => _save(languageService),
                     child: const Text('Speichern'),
                   ),
 
@@ -286,8 +342,23 @@ Widget build(BuildContext context) {
               ],
             ),
           ),
-  );
+  ),
+    ),
+
+    // EBENE 2: Lade-Indikator (wird nur angezeigt, wenn geladen wird)
+    if (currentlyLoading)
+      Positioned.fill(
+        child: Container(
+          color: Colors.black45,
+          child: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ),
+    ],
+    ),  
+    );
 }
-      }
+}
 
       

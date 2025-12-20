@@ -105,9 +105,9 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildField('Sprache 1', _lang1Controller),
-                  _buildField('Sprache 2', _lang2Controller),
-                  _buildField('Sprache 3', _lang3Controller),
+                  _buildField('Hauptsprache', _lang1Controller),
+                  _buildField('Lernsprache 1', _lang2Controller),
+                  _buildField('Lernsprache 2', _lang3Controller),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
