@@ -136,5 +136,35 @@ class SupabaseService {
     return true;
   }
 
+  Future<List<String>> checkDuplicates(Map<String, dynamic> data) async {
+    final query = client!.from(tableName).select();
+
+    data.forEach((key, value) {
+      if (value != null && value.toString().trim().isNotEmpty) {
+        query.eq(key, value);
+      }
+    });
+
+    final response = await query.select();
+
+    final duplicates = <String>{};
+
+    for (var record in response) {
+      data.forEach((key, value) {
+        if (value != null && value.toString().trim().isNotEmpty) {
+          if (record[key] == value) {
+            duplicates.add(key);
+          }
+        }
+      });
+    }
+
+    return duplicates.toList();
+  }
+
+  Future<void> deleteVocabulary(int id) async {
+    await client!.from(tableName).delete().eq('id', id);
+  }
+
 
 }

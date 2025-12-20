@@ -104,6 +104,33 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
     }
   }
 
+Future<void> _delete(LanguageService service) async {
+    if (_selectedId == null) {
+      setState(() => _message = 'Kein Set zum Löschen ausgewählt.');
+      return;
+    }
+
+    setState(() { _isLoading = true; _message = null; });
+
+    try {
+      await widget.supabaseService.deleteVocabulary(_selectedId!);
+      setState(() {
+        _message = 'Set ID $_selectedId gelöscht! ✅';
+        _selectedId = null;
+      });
+      _clearFields();
+      await _loadIds(); 
+    } on PostgrestException catch (e) {
+      setState(() => _message = 'DB Fehler: ${e.message}');
+    } catch (e) {
+      setState(() => _message = 'Fehler: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+
+
   Future<void> _save(LanguageService service) async {
     setState(() { _isLoading = true; _message = null; });
 
@@ -126,8 +153,16 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
 
     try {
       if (_mode == CreationMode.createNew) {
-        if (data['word_1_ger'] == null) throw Exception('Bitte mindestens das erste deutsche Wort eingeben.');
+        if (data['word_1_ger'] == null){
+            setState(() => _message = 'Bitte mindestens ein Wort in der Hauptsprache eingeben.');
+        } 
         
+        final duplicates = await widget.supabaseService.checkDuplicates(data);
+        if (duplicates.isNotEmpty) {
+          setState(() => _message = 'Duplikate gefunden in: ${duplicates.join(", ")}. Bitte anpassen.');
+          return;
+        }
+
         await widget.supabaseService.createVocabulary(data);
         setState(() => _message = 'Neues Set erfolgreich angelegt! ✅');
         _clearFields();
@@ -145,10 +180,9 @@ class _TrainerCreateTabState extends State<TrainerCreateTab> {
           } finally {
             setState(() => _isLoading = false);
           }
-        }
-        
-
-
+  }
+  
+      
 
 @override
 Widget build(BuildContext context) {
@@ -159,11 +193,9 @@ Widget build(BuildContext context) {
     appBar: AppBar(title: const Text('Trainer erstellen')),
     body: Stack(
   children: [
-    // EBENE 1: Dein eigentlicher Inhalt (bleibt jetzt immer im Hintergrund bestehen)
     Positioned.fill(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        // AbsorbPointer blockiert Klicks, solange geladen wird (damit man nicht doppelt klickt)
         child: AbsorbPointer(
           absorbing: currentlyLoading, 
           child: Column(
@@ -212,26 +244,20 @@ Widget build(BuildContext context) {
                           ),
                         );
                       } else {
-                        // 2. Sicheres selectedItem ermitteln
-                        // Nutzt firstWhereOrNull (aus package:collection) oder manuelle Logik
+
                         final Vocabulary? currentSelection = _selectedId == null
                             ? null
                             : validSets.where((set) => set.id == _selectedId).firstOrNull;
-                        
-                        // Fallback: Wenn ID gesetzt ist, aber nicht in der Liste gefunden wurde -> null setzen
-                        // (Verhindert Absturz durch veraltete IDs)
+
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24.0),
                           child: DropdownSearch<Vocabulary>(
-                                  // 1. WICHTIG: Ein Key hilft Flutter, das Widget stabil zu halten
+
                                 key: const ValueKey('vocab_dropdown'), 
-
                                 items: (filter, loadProps) => validSets,
-
                                 compareFn: (item, selectedItem) => item.id == selectedItem.id,
 
-                                // 2. Deine Logik für die Auswahl (mit .where und .firstOrNull ist es sicher)
                                 selectedItem: _selectedId == null
                                     ? null
                                     : validSets.where((set) => set.id == _selectedId).firstOrNull,
@@ -244,9 +270,7 @@ Widget build(BuildContext context) {
                                 decoratorProps: const DropDownDecoratorProps(
 
                                   baseStyle: const TextStyle(
-                                  fontSize: 16,              // <-- Schriftgröße
-                                  // fontWeight: FontWeight.bold, // <-- Fett (Bold)
-                                  // color: Colors.black87,     // Farbe
+                                  fontSize: 16,              
                                   ),
 
                                   decoration: InputDecoration(
@@ -254,18 +278,13 @@ Widget build(BuildContext context) {
 
                                     labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                                       
-
-
                                     hintText: "Suchen...",
-                                    // filled: true,
-                                    // fillColor: Colors.blueGrey ,
+
                                     border: OutlineInputBorder(),
                                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   ),
                                 ),
 
-                                // 3. DER FIX: ModalBottomSheet statt Menu
-                                // Das verhindert den "AnimationController disposed" Absturz
                                 popupProps: PopupProps.modalBottomSheet(
                                   showSearchBox: true,
                                   searchFieldProps: const TextFieldProps(
@@ -326,13 +345,72 @@ Widget build(BuildContext context) {
                        ],
                      );
                   }),
-
+               
                 if (_mode == CreationMode.createNew ||
-                    (_mode == CreationMode.extendExisting && _selectedId != null))
-                  ElevatedButton(
-                    onPressed: () => _save(languageService),
-                    child: const Text('Speichern'),
+                  (_mode == CreationMode.extendExisting && _selectedId != null))
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0), // Etwas Abstand nach oben zu den Textfeldern
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green, 
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () => _save(languageService),
+                          child: const Text('Speichern', style: TextStyle(fontSize: 16)),
+                        ),
+                      ),
+
+                      if (_mode != CreationMode.createNew) ...[
+                        const SizedBox(width: 16), 
+                        
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () async {
+                              final bool? shouldDelete = await showDialog<bool>(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Wirklich löschen?'),
+                                    content: const Text('Möchtest du dieses Wort unwiderruflich löschen?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false), // Gibt 'false' zurück
+                                        child: const Text('Abbrechen'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, true), // Gibt 'true' zurück
+                                        child: const Text('Löschen', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+
+                              // Löschen bei true
+                              if (shouldDelete == true) {
+                                _delete(languageService);
+                              }
+                            },
+                            child: const Text('Löschen', style: TextStyle(fontSize: 16)),
+                          ),
+                        ),
+                      ],
+                      
+                    ],
                   ),
+                ),
+
 
                 if (_message != null)
                   Padding(
@@ -345,7 +423,8 @@ Widget build(BuildContext context) {
   ),
     ),
 
-    // EBENE 2: Lade-Indikator (wird nur angezeigt, wenn geladen wird)
+    //Loading 
+    
     if (currentlyLoading)
       Positioned.fill(
         child: Container(
