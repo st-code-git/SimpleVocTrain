@@ -13,7 +13,7 @@ const String appVersion = String.fromEnvironment(
 
 class VocabularyTrainerScreen extends StatefulWidget {
   const VocabularyTrainerScreen({super.key});
-
+  
   @override
   State<VocabularyTrainerScreen> createState() => _VocabularyTrainerScreenState();
 }
@@ -63,7 +63,14 @@ class _VocabularyTrainerScreenState extends State<VocabularyTrainerScreen> {
               icon: const Icon(Icons.logout),
               tooltip: 'Ausloggen',
               onPressed: () async {
-                await _supabaseService.signOut();
+                //showDialog(context: context, builder: (_) => const Center(child: CircularProgressIndicator()));
+                try 
+                {
+                  await _supabaseService.signOut();
+                } catch (e) {
+                  Navigator.pop(context); // Lade-Indikator weg
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Logout fehlgeschlagen: $e")));
+                }
               },
             ),
         ],

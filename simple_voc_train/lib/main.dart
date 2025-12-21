@@ -1,6 +1,6 @@
 // lib/main.dart
 
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/vocabulary_trainer_screen.dart';
@@ -12,7 +12,6 @@ import 'services/language_service.dart';
 import 'package:provider/provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,12 +37,18 @@ class MyApp extends StatefulWidget {
 
 
 class _MyAppState extends State<MyApp> {
+
+  late final StreamSubscription<AuthState> _authSubscription;
+
   @override
   void initState() {
     super.initState();
-
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _setupAuthListener();
+  }
+    void _setupAuthListener() {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final AuthChangeEvent event = data.event;
+      final Session? session = data.session;
 
       print("Auth State changed: $event");
 
@@ -62,7 +67,18 @@ class _MyAppState extends State<MyApp> {
           navigatorKey.currentState?.pushNamed('/update-password-page');
         }
       }
+
+      if(event == AuthChangeEvent.signedOut) {
+
+        navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel(); // Wichtig: Listener beenden!
+    super.dispose();
   }
 
   @override
@@ -89,7 +105,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

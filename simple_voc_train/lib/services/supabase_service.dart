@@ -4,20 +4,21 @@ import '../models/app_language.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
-class SupabaseService {
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+class SupabaseService {
+  
+  // 1. Privater Konstruktor
   SupabaseService._internal();
 
-  //Singleton Pattern
+  // 2. Singleton Instance
   static final SupabaseService _instance = SupabaseService._internal();
-
   static SupabaseService get instance => _instance;
 
-  SupabaseClient? client;
-
+  // 3. Initialisierung (nur Env laden und Supabase starten)
   Future<void> init() async {
     try {
-      // load dotenv secrets
       await dotenv.load(fileName: "assets/env");
 
       await Supabase.initialize(
@@ -27,26 +28,21 @@ class SupabaseService {
           authFlowType: AuthFlowType.implicit,
         ),
       );
-
-      client = Supabase.instance.client;
-
+      // HIER KEIN client = ... MEHR SETZEN!
+      
     } catch (e) {
       print("Fehler beim Start: $e");
     }
   }
 
-  SupabaseClient get safeClient {
-    if (client == null) {
-      throw Exception(
-          "SupabaseClient ist noch nicht initialisiert. Rufe zuerst init() auf!");
-    }
-    return client!;
+  // 4. Der Getter greift IMMER auf das aktuelle Original zu
+  // Das verhindert, dass deine Variable 'null' ist, während Supabase eigentlich bereit wäre.
+  SupabaseClient get client {
+    return Supabase.instance.client;
   }
-
 
    //Central table name
   static const String tableName = 'Vocabulary_Master';
-
 
   Future<int> getVocabularyCount() async {
     return await client!.from(tableName).count();
